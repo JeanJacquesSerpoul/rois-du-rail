@@ -3,6 +3,7 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import type { PlayerConfig } from '../shared/types';
 import { Game } from './components/Game';
 import { Home, Setup } from './components/Screens';
+import { startTutorial } from './components/Tutorial';
 import { api } from './lib/api';
 import { introSeen } from './lib/intro';
 
@@ -38,6 +39,22 @@ export default function App() {
     go(`#/partie/${id}`);
   };
 
+  /** Partie guidée : une vraie partie contre un ordinateur facile, commentée par le chef de gare. */
+  const tutorial = async () => {
+    let name = 'Vous';
+    try {
+      name = localStorage.getItem('rdr.name') || name;
+    } catch {
+      /* stockage indisponible */
+    }
+    const { id } = await api.createGame([
+      { name, isBot: false, color: 'crimson' },
+      { name: 'Gustave', isBot: true, color: 'navy', level: 'easy' },
+    ]);
+    startTutorial(id);
+    go(`#/partie/${id}`);
+  };
+
   let screen: React.ReactNode;
   switch (route.name) {
     case 'setup':
@@ -47,7 +64,7 @@ export default function App() {
       screen = <Game key={route.id} id={route.id} onExit={() => go('#/')} onNewGame={() => go('#/nouvelle')} />;
       break;
     default:
-      screen = <Home onNew={() => go('#/nouvelle')} onOpen={(id) => go(`#/partie/${id}`)} onIntro={() => setShowIntro(true)} />;
+      screen = <Home onNew={() => go('#/nouvelle')} onOpen={(id) => go(`#/partie/${id}`)} onIntro={() => setShowIntro(true)} onTutorial={tutorial} />;
   }
 
   return (

@@ -11,6 +11,15 @@ const CITY_R = 8;
 const WAGON_H = 9;
 const DOUBLE_OFFSET = 6.6;
 
+/** Trajet d'une destination à afficher sur la carte (calque « Mes trajets »). */
+export interface PlanOverlay {
+  id: number;
+  a: string;
+  b: string;
+  state: 'done' | 'open' | 'blocked';
+  routeIds: number[];
+}
+
 interface Wagon {
   x: number;
   y: number;
@@ -264,6 +273,8 @@ interface BoardProps {
   claimAnim?: boolean;
   /** Route sur laquelle recentrer la carte si elle est trop petite à l'écran. */
   focusRoute?: number | null;
+  /** Calque des trajets de destinations. */
+  plans?: PlanOverlay[];
   onRouteClick: (id: number) => void;
 }
 
@@ -276,6 +287,7 @@ export function Board({
   hintRoute = null,
   claimAnim = false,
   focusRoute = null,
+  plans = [],
   onRouteClick,
 }: BoardProps) {
   const down = useRef<{ x: number; y: number } | null>(null);
@@ -429,6 +441,27 @@ export function Board({
                 </g>
               );
             })}
+
+            {/* calque des trajets de destinations */}
+            {plans.length > 0 && (
+              <g className="plans" pointerEvents="none">
+                {plans.map((p) => {
+                  const a = CITY_BY_ID[p.a];
+                  const b = CITY_BY_ID[p.b];
+                  return (
+                    <g key={p.id} className={`plan plan--${p.state}`}>
+                      {p.state === 'blocked' && <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="plan__direct" />}
+                      {p.routeIds.map((rid) => {
+                        const g = GEOMS[rid];
+                        return <line key={rid} x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="plan__route" />;
+                      })}
+                      <circle cx={a.x} cy={a.y} r={CITY_R + 6} className="plan__city" />
+                      <circle cx={b.x} cy={b.y} r={CITY_R + 6} className="plan__city" />
+                    </g>
+                  );
+                })}
+              </g>
+            )}
 
             {/* villes */}
             {CITIES.map((c) => {

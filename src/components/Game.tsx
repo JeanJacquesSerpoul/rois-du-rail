@@ -1,16 +1,19 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { advise, type Advice } from '../../shared/advisor';
-import { claimStatus, paymentOptions, ticketDone } from '../../shared/engine';
+import { advise, ticketStatuses, type Advice } from '../../shared/advisor';
+import { planPath } from '../../shared/bot';
+import { CARD_ADJ, claimStatus, computePayment, paymentOptions, routeBlockedByPair, ticketDone } from '../../shared/engine';
+import { TICKET_BY_ID } from '../../shared/map';
 import { ROUTES, ROUTE_BY_ID } from '../../shared/map';
 import type { Action, CardColor, GameEvent, GameState } from '../../shared/types';
 import { api } from '../lib/api';
 import { BOT_DELAYS, usePref } from '../lib/prefs';
 import { PLAYER_FILL } from '../lib/theme';
 import { AdvisorSheet } from './Advisor';
-import { Board, travelTime } from './Board';
+import { Board, travelTime, type PlanOverlay } from './Board';
 import { EndScreen } from './EndScreen';
 import { SettingsButton } from './Settings';
+import { Coach } from './Tutorial';
 import { ClaimSheet, EventLog, HandView, Market, PlayersBar, TicketsSheet, Toasts } from './Panels';
 import { Sheet, TicketPicker } from './Tickets';
 
@@ -26,6 +29,10 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   const [preview, setPreview] = useState<string[]>([]);
   const [showTickets, setShowTickets] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  // calque des trajets de destinations, et couleur de la main touchée pour voir ce qu'elle paie
+  const [showPlans, setShowPlans] = useState(false);
+  const [handFocus, setHandFocus] = useState<CardColor | null>(null);
+  const [adviceOpened, setAdviceOpened] = useState(false);
   const showClaimable = usePref('showClaimable');
   const botSpeed = usePref('botSpeed');
   // « Accélérer » : les ordinateurs jouent sans pause jusqu'au prochain tour humain
@@ -130,10 +137,40 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
     return () => clearTimeout(t);
   }, [error]);
 
+  const handVisible = !!state && viewer !== null && !(humans.length > 1 && !myTurn && state.phase !== 'finished');
+
   const claimable = useMemo(() => {
-    if (!state || !myTurn || !showClaimable || state.turn !== null || viewer === null) return new Set<number>();
+    if (!state || viewer === null) return new Set<number>();
+    // aperçu : routes payables avec la couleur touchée dans la main (même hors de son tour)
+    if (handFocus && handVisible) {
+      const me = state.players[viewer];
+      return new Set(
+        ROUTES.filter(
+          (r) =>
+            state.owners[r.id] === undefined &&
+            !routeBlockedByPair(state, r, viewer) &&
+            me.wagons >= r.length &&
+            (handFocus === 'loco' ? paymentOptions(me.hand, r).some((p) => p.locos > 0) : computePayment(me.hand, r, handFocus) !== null),
+        ).map((r) => r.id),
+      );
+    }
+    if (!myTurn || !showClaimable || state.turn !== null) return new Set<number>();
     return new Set(ROUTES.filter((r) => claimStatus(state, viewer, r.id) === 'ok').map((r) => r.id));
-  }, [state, myTurn, showClaimable, viewer]);
+  }, [state, myTurn, showClaimable, viewer, handFocus, handVisible]);
+
+  const plans = useMemo<PlanOverlay[]>(() => {
+    if (!state || !showPlans || viewer === null || !handVisible) return [];
+    return ticketStatuses(state, viewer).map((t) => {
+      const ticket = TICKET_BY_ID[t.id];
+      const routeIds = t.state === 'open' ? (planPath(state, viewer, ticket.a, ticket.b)?.routes.map((r) => r.id) ?? []) : [];
+      return { id: t.id, a: ticket.a, b: ticket.b, state: t.state, routeIds };
+    });
+  }, [state, showPlans, viewer, handVisible]);
+
+  // la couleur touchée n'a plus de sens si elle a quitté la main
+  useEffect(() => {
+    if (handFocus && state && viewer !== null && state.players[viewer].hand[handFocus] === 0) setHandFocus(null);
+  }, [state, viewer, handFocus]);
 
   const handHighlight = useMemo(() => {
     if (!state || selectedRoute === null || viewer === null) return new Set<CardColor>();
@@ -186,6 +223,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           hintRoute={hint?.routeId ?? null}
           claimAnim={claimAnim}
           focusRoute={selectedRoute ?? hint?.routeId ?? null}
+          plans={plans}
           claimable={claimable}
           flashRoute={flashRoute}
           onRouteClick={(rid) => setSelectedRoute(rid)}
@@ -220,10 +258,27 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
                 const a = advise(state, viewer);
                 setAdvice(a);
                 setHint(a);
+                setAdviceOpened(true);
               }}
               title="Demander conseil au chef de gare"
             >
               🧑‍✈️ Chef de gare
+            </button>
+          )}
+          {handVisible && viewerTickets.length > 0 && state.phase !== 'finished' && (
+            <button
+              type="button"
+              className={`chip-btn ${showPlans ? 'is-on' : ''}`}
+              onClick={() => setShowPlans((v) => !v)}
+              aria-pressed={showPlans}
+              title="Afficher le trajet restant de chaque destination"
+            >
+              🎫 Trajets
+            </button>
+          )}
+          {handFocus && (
+            <button type="button" className="chip-btn is-on" onClick={() => setHandFocus(null)}>
+              ✕ Aperçu {CARD_ADJ[handFocus]}
             </button>
           )}
           {hint && !advice && (
@@ -237,6 +292,9 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
             </button>
           )}
         </div>
+        {viewer !== null && !mustPassDevice && (
+          <Coach gameId={id} state={state} viewer={viewer} myTurn={myTurn} plansShown={showPlans} adviceOpened={adviceOpened} />
+        )}
         <Toasts toasts={toasts} state={state} />
         <AnimatePresence>
           {error && (
@@ -261,7 +319,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
             {humans.length > 1 && !myTurn && state.phase !== 'finished' ? (
               <div className="hand hand--hidden">Main cachée jusqu'au tour du prochain joueur</div>
             ) : (
-              <HandView state={state} seat={viewer} highlight={handHighlight} />
+              <HandView state={state} seat={viewer} highlight={handHighlight} focus={handFocus} onFocus={setHandFocus} />
             )}
             <motion.button
               type="button"

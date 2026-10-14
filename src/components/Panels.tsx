@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { CARD_COLORS, COLOR_NAMES, ROUTE_POINTS, claimStatus, handSize, paymentOptions, routeName, ticketDone } from '../../shared/engine';
+import { CARD_COLORS, COLOR_NAMES, LONGEST_BONUS, ROUTE_POINTS, longestPath, claimStatus, handSize, paymentOptions, routeName, ticketDone } from '../../shared/engine';
 import { BOT_LEVEL_NAMES } from '../../shared/bot';
 import { CITY_BY_ID, ROUTE_BY_ID, TICKET_BY_ID } from '../../shared/map';
 import type { CardColor, GameEvent, GameState } from '../../shared/types';
@@ -113,7 +113,20 @@ export function Market({ state, canAct, onFaceUp, onDeck, onTickets, hint }: Mar
   );
 }
 
-export function HandView({ state, seat, highlight }: { state: GameState; seat: number; highlight: Set<CardColor> }) {
+export function HandView({
+  state,
+  seat,
+  highlight,
+  focus = null,
+  onFocus,
+}: {
+  state: GameState;
+  seat: number;
+  highlight: Set<CardColor>;
+  /** Couleur touchée pour voir les routes qu'elle permet de payer. */
+  focus?: CardColor | null;
+  onFocus?: (c: CardColor | null) => void;
+}) {
   const hand = state.players[seat].hand;
   const colors = CARD_COLORS.filter((c) => hand[c] > 0);
   return (
@@ -122,7 +135,13 @@ export function HandView({ state, seat, highlight }: { state: GameState; seat: n
       <AnimatePresence>
         {colors.map((c) => (
           <motion.div key={c} layout initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.4, opacity: 0 }}>
-            <TrainCard color={c} count={hand[c]} size="sm" highlight={highlight.has(c)} />
+            <TrainCard
+              color={c}
+              count={hand[c]}
+              size="sm"
+              highlight={highlight.has(c) || focus === c}
+              onClick={onFocus ? () => onFocus(focus === c ? null : c) : undefined}
+            />
           </motion.div>
         ))}
       </AnimatePresence>
@@ -217,6 +236,46 @@ export function ClaimSheet({ state, routeId, seat, busy, onClaim, onClose }: Cla
   );
 }
 
+/** Score détaillé en direct, avec ce que le joueur sait (ses billets et la table). */
+function ScoreSummary({ state, seat }: { state: GameState; seat: number }) {
+  const me = state.players[seat];
+  const doneIds = me.tickets.filter((id) => ticketDone(state, seat, id));
+  const openIds = me.tickets.filter((id) => !doneIds.includes(id));
+  const ticketGain = doneIds.reduce((n, id) => n + TICKET_BY_ID[id].points, 0);
+  const ticketRisk = openIds.reduce((n, id) => n + TICKET_BY_ID[id].points, 0);
+  const mine = longestPath(state, seat);
+  const best = Math.max(0, ...state.players.map((_, i) => (i === seat ? 0 : longestPath(state, i))));
+  const leads = mine > 0 && mine >= best;
+  const total = me.routePoints + ticketGain - ticketRisk + (leads ? LONGEST_BONUS : 0);
+  return (
+    <div className="score-sum">
+      <div className="score-sum__row">
+        <span>🛤️ Routes posées</span>
+        <b>{me.routePoints} pts</b>
+      </div>
+      <div className="score-sum__row score-sum__row--good">
+        <span>✓ Billets réalisés ({doneIds.length})</span>
+        <b>+{ticketGain}</b>
+      </div>
+      <div className="score-sum__row score-sum__row--risk">
+        <span>⏳ Billets en cours ({openIds.length})</span>
+        <b>{ticketRisk ? `−${ticketRisk}` : '0'}</b>
+      </div>
+      <div className="score-sum__row">
+        <span>
+          🏅 Plus long trajet : {mine} wagon{mine > 1 ? 's' : ''}
+          <small>{leads ? ' · en tête' : ` · record adverse ${best}`}</small>
+        </span>
+        <b>{leads ? `+${LONGEST_BONUS}` : '0'}</b>
+      </div>
+      <div className="score-sum__row score-sum__row--total">
+        <span>Si la partie finissait maintenant</span>
+        <b>{total < 0 ? `−${-total}` : total} pts</b>
+      </div>
+    </div>
+  );
+}
+
 export function TicketsSheet({
   state,
   seat,
@@ -232,6 +291,7 @@ export function TicketsSheet({
   const done = tickets.filter((id) => ticketDone(state, seat, id)).length;
   return (
     <Sheet title="Vos destinations" subtitle={`${done} / ${tickets.length} réalisées · touchez un billet pour le voir sur la carte`} onClose={onClose}>
+      <ScoreSummary state={state} seat={seat} />
       <div className="ticket-list">
         {tickets.map((id) => (
           <TicketCard
