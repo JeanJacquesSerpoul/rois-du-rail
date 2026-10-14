@@ -306,7 +306,8 @@ input {
 
 .hero-train__car--loco {
   width: 72px;
-  filter: drop-shadow(0 0 0 var(--cream));
+  /* l'icône regarde vers la gauche : on la retourne pour qu'elle tire le convoi */
+  transform: scaleX(-1);
 }
 
 .hero-train__car--loco .wagon-icon g {
@@ -315,7 +316,7 @@ input {
 
 .hero-train__smoke {
   position: absolute;
-  right: 50px;
+  right: 12px;
   top: -18px;
   width: 16px;
   height: 16px;
