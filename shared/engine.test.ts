@@ -1,0 +1,49 @@
+import { describe, expect, it } from 'vitest';
+import { applyAction, createGame, computePayment, longestPath } from './engine';
+import { botAction } from './bot';
+import { ROUTES, ROUTE_BY_ID } from './map';
+import type { PlayerColor } from './types';
+
+const colors: PlayerColor[] = ['crimson', 'navy', 'forest', 'amber', 'violet'];
+const players = (n: number) => colors.slice(0, n).map((color, i) => ({ name: `Bot ${i + 1}`, isBot: true, color }));
+
+describe('moteur', () => {
+  it('distribue la partie', () => {
+    const s = createGame(players(3), 42);
+    expect(s.players.every((p) => Object.values(p.hand).reduce((a, b) => a + b) === 4)).toBe(true);
+    expect(s.market.filter(Boolean)).toHaveLength(5);
+    expect(s.deck.length + s.discard.length).toBe(110 - 12 - 5);
+  });
+
+  it('calcule les paiements', () => {
+    const route = ROUTES.find((r) => r.color === 'red' && r.length === 3)!;
+    const hand = { red: 2, orange: 0, yellow: 0, green: 0, blue: 0, purple: 0, black: 0, white: 0, loco: 1 };
+    expect(computePayment(hand, route, 'red')).toEqual({ color: 'red', colored: 2, locos: 1 });
+    expect(computePayment(hand, route, 'blue')).toBeNull();
+  });
+
+  for (const n of [2, 3, 4, 5]) {
+    it(`simule des parties complètes entre ${n} bots`, () => {
+      for (let seed = 1; seed <= 15; seed++) {
+        let s = createGame(players(n), seed * 7919);
+        let steps = 0;
+        while (s.phase !== 'finished' && steps < 5000) {
+          s = applyAction(s, s.current, botAction(s));
+          steps++;
+        }
+        expect(s.phase).toBe('finished');
+        expect(s.results).toHaveLength(n);
+        const cards = s.deck.length + s.discard.length + s.market.filter(Boolean).length +
+          s.players.reduce((t, p) => t + Object.values(p.hand).reduce((a, b) => a + b), 0);
+        expect(cards).toBe(110);
+        if (seed === 1) console.log(n, 'joueurs', steps, 'actions', s.results!.map((r) => `${r.total}(${r.tickets.filter(t=>t.done).length}/${r.tickets.length})`).join(' '));
+      }
+    });
+  }
+
+  it('longest path', () => {
+    let s = createGame(players(2), 3);
+    s = { ...s, owners: { 0: 0, 1: 0 } };
+    expect(longestPath(s, 0)).toBe(ROUTE_BY_ID[0].length + ROUTE_BY_ID[1].length);
+  });
+});

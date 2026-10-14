@@ -1,0 +1,11 @@
+{
+  "name": "Rois du Rail",
+  "short_name": "Rois du Rail",
+  "description": "Jeu de conquête ferroviaire à travers la France",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1b2a41",
+  "theme_color": "#1b2a41",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
