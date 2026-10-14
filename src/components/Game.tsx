@@ -1,21 +1,22 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { advise, type Advice } from '../../shared/advisor';
 import { claimStatus, paymentOptions, ticketDone } from '../../shared/engine';
 import { ROUTES, ROUTE_BY_ID } from '../../shared/map';
 import type { Action, CardColor, GameEvent, GameState } from '../../shared/types';
 import { api } from '../lib/api';
+import { BOT_DELAYS, usePref } from '../lib/prefs';
 import { PLAYER_FILL } from '../lib/theme';
 import { AdvisorSheet } from './Advisor';
-import { AnimToggle, useClaimAnim } from './AnimToggle';
 import { Board, travelTime } from './Board';
-import { EndCinematic } from './EndCinematic';
 import { EndScreen } from './EndScreen';
-import { MusicToggle } from './MusicToggle';
+import { SettingsButton } from './Settings';
 import { ClaimSheet, EventLog, HandView, Market, PlayersBar, TicketsSheet, Toasts } from './Panels';
-import { TicketPicker } from './Tickets';
+import { Sheet, TicketPicker } from './Tickets';
 
-const BOT_DELAY = 750;
+
+// séquence de fin chargée à la demande : elle ne sert qu'une fois par partie
+const EndCinematic = lazy(() => import('./EndCinematic').then((m) => ({ default: m.EndCinematic })));
 
 export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void; onNewGame: () => void }) {
   const [state, setState] = useState<GameState | null>(null);
@@ -24,12 +25,16 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   const [selectedRoute, setSelectedRoute] = useState<number | null>(null);
   const [preview, setPreview] = useState<string[]>([]);
   const [showTickets, setShowTickets] = useState(false);
-  const [showClaimable, setShowClaimable] = useState(true);
+  const [showLog, setShowLog] = useState(false);
+  const showClaimable = usePref('showClaimable');
+  const botSpeed = usePref('botSpeed');
+  // « Accélérer » : les ordinateurs jouent sans pause jusqu'au prochain tour humain
+  const [rush, setRush] = useState(false);
   const [revealed, setRevealed] = useState<number | null>(null);
   const [lastHuman, setLastHuman] = useState<number | null>(null);
   const [toasts, setToasts] = useState<GameEvent[]>([]);
   const [flashRoute, setFlashRoute] = useState<number | null>(null);
-  const claimAnim = useClaimAnim();
+  const claimAnim = usePref('claimAnim');
   const [showEnd, setShowEnd] = useState(true);
   // séquence spectaculaire quand la partie se termine sous nos yeux
   const [cinematic, setCinematic] = useState(false);
@@ -72,7 +77,8 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   // L'ordinateur joue tout seul, une action à la fois pour qu'on puisse suivre.
   useEffect(() => {
     if (!state || state.phase === 'finished' || !state.players[state.current].isBot) return;
-    const delay = state.turn?.kind === 'draw' ? BOT_DELAY * 0.6 : BOT_DELAY;
+    const base = rush ? 0 : BOT_DELAYS[botSpeed];
+    const delay = state.turn?.kind === 'draw' ? base * 0.6 : base;
     const t = setTimeout(() => {
       api
         .bot(id)
@@ -80,13 +86,16 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
         .catch((e) => setError(e.message));
     }, delay);
     return () => clearTimeout(t);
-  }, [state, id, receive]);
+  }, [state, id, receive, rush, botSpeed]);
 
   const humans = useMemo(() => (state ? state.players.flatMap((p, i) => (p.isBot ? [] : [i])) : []), [state]);
   const currentIsHuman = state ? !state.players[state.current].isBot : false;
 
   useEffect(() => {
-    if (state && currentIsHuman) setLastHuman(state.current);
+    if (state && currentIsHuman) {
+      setLastHuman(state.current);
+      setRush(false);
+    }
   }, [state, currentIsHuman]);
 
   // Joueur dont on montre la main (jeu en local : celui qui a l'appareil)
@@ -166,8 +175,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           ←
         </button>
         <PlayersBar state={state} viewer={viewer} />
-        <AnimToggle />
-        <MusicToggle />
+        <SettingsButton />
       </header>
 
       <main className="game__board">
@@ -177,6 +185,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           highlightCities={hint ? [...preview, ...hint.cities] : preview}
           hintRoute={hint?.routeId ?? null}
           claimAnim={claimAnim}
+          focusRoute={selectedRoute ?? hint?.routeId ?? null}
           claimable={claimable}
           flashRoute={flashRoute}
           onRouteClick={(rid) => setSelectedRoute(rid)}
@@ -198,14 +207,11 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
               🏆 Résultats
             </button>
           )}
-          <button
-            type="button"
-            className={`chip-btn ${showClaimable ? 'is-on' : ''}`}
-            onClick={() => setShowClaimable((v) => !v)}
-            title="Mettre en évidence les routes que vous pouvez prendre"
-          >
-            ✨ Routes jouables
-          </button>
+          {!currentIsHuman && state.phase !== 'finished' && !rush && (
+            <button type="button" className="chip-btn" onClick={() => setRush(true)} title="Les ordinateurs jouent sans pause jusqu'à votre tour">
+              ⏩ Accélérer
+            </button>
+          )}
           {myTurn && state.phase === 'playing' && state.turn?.kind !== 'tickets' && viewer !== null && (
             <button
               type="button"
@@ -269,6 +275,16 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
                 {doneCount}/{viewerTickets.length}
               </span>
             </motion.button>
+            <motion.button
+              type="button"
+              className="tickets-btn log-btn"
+              onClick={() => setShowLog(true)}
+              whileTap={{ scale: 0.94 }}
+              aria-label="Journal de la partie"
+            >
+              <span className="tickets-btn__icon">📜</span>
+              <span>Journal</span>
+            </motion.button>
           </div>
         )}
         <div className="panel__log">
@@ -294,6 +310,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
         )}
         {selectedRoute !== null && !ticketChoice && (
           <ClaimSheet
+            key="claim"
             state={state}
             routeId={selectedRoute}
             seat={myTurn ? viewer : null}
@@ -311,11 +328,17 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
             onClose={() => setAdvice(null)}
           />
         )}
+        {showLog && (
+          <Sheet key="log" title="Journal de la partie" onClose={() => setShowLog(false)}>
+            <EventLog state={state} />
+          </Sheet>
+        )}
         {showTickets && viewer !== null && (
-          <TicketsSheet state={state} seat={viewer} onClose={() => setShowTickets(false)} onShow={setPreview} />
+          <TicketsSheet key="tickets" state={state} seat={viewer} onClose={() => setShowTickets(false)} onShow={setPreview} />
         )}
         {mustPassDevice && (
           <motion.button
+            key="pass-device"
             type="button"
             className="pass-device"
             style={{ ['--pc' as string]: PLAYER_FILL[current.color] }}
@@ -334,14 +357,15 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           </motion.button>
         )}
         {state.phase === 'finished' && cinematic && (
-          <EndCinematic
-            key="cinematic"
-            state={state}
-            onDone={() => {
-              setCinematic(false);
-              setShowEnd(true);
-            }}
-          />
+          <Suspense key="cinematic" fallback={null}>
+            <EndCinematic
+              state={state}
+              onDone={() => {
+                setCinematic(false);
+                setShowEnd(true);
+              }}
+            />
+          </Suspense>
         )}
         {state.phase === 'finished' && showEnd && !cinematic && (
           <EndScreen

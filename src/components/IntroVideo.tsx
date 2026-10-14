@@ -2,6 +2,8 @@ import { animate, AnimatePresence, motion, useMotionValue, useTransform } from '
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CITY_BY_ID, FRANCE_PATH, MAP_HEIGHT, MAP_WIDTH, ROUTES, TICKETS } from '../../shared/map';
 import type { CardColor } from '../../shared/types';
+import { markIntroSeen as markSeen } from '../lib/intro';
+import { setPref, usePref } from '../lib/prefs';
 import { CARD_FILL, PLAYER_FILL, ROUTE_FILL } from '../lib/theme';
 import { TicketCard } from './Tickets';
 import { TrainCard, WagonIcon } from './TrainCard';
@@ -10,25 +12,6 @@ import { TrainCard, WagonIcon } from './TrainCard';
  * Présentation du jeu en motion design, jouée comme une vidéo : chapitres animés,
  * sous-titres, voix off (synthèse vocale du navigateur) et contrôles de lecture.
  */
-
-const SEEN_KEY = 'rdr.introSeen';
-const VOICE_KEY = 'rdr.introVoice';
-
-export function introSeen(): boolean {
-  try {
-    return localStorage.getItem(SEEN_KEY) === '1';
-  } catch {
-    return true; // stockage indisponible : on n'impose pas la vidéo à chaque visite
-  }
-}
-
-function markSeen() {
-  try {
-    localStorage.setItem(SEEN_KEY, '1');
-  } catch {
-    /* stockage indisponible */
-  }
-}
 
 // ---------------------------------------------------------------- scènes
 
@@ -435,13 +418,7 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
   const [playing, setPlaying] = useState(false);
   const [chapter, setChapter] = useState(0);
   const [elapsed, setElapsed] = useState(0); // secondes écoulées dans le chapitre
-  const [voiceOn, setVoiceOn] = useState(() => {
-    try {
-      return localStorage.getItem(VOICE_KEY) !== '0';
-    } catch {
-      return true;
-    }
-  });
+  const voiceOn = usePref('introVoice');
   const voice = useVoice(voiceOn);
 
   const close = useCallback(() => {
@@ -503,12 +480,7 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
 
   const toggleVoice = () => {
     const next = !voiceOn;
-    setVoiceOn(next);
-    try {
-      localStorage.setItem(VOICE_KEY, next ? '1' : '0');
-    } catch {
-      /* stockage indisponible */
-    }
+    setPref('introVoice', next);
     if (!next) voice.stop();
   };
   // relance la phrase courante quand on réactive la voix

@@ -779,8 +779,52 @@ button.train-card:not(:disabled):hover {
   fill: #6b5430;
 }
 
-.route {
+.board__svg {
   cursor: pointer;
+}
+
+.route-chooser {
+  position: absolute;
+  z-index: 4;
+  translate: -50% calc(-100% - 14px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--paper);
+  border: 2px solid var(--brass);
+  box-shadow: var(--shadow);
+}
+
+.route-chooser__title {
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--navy);
+  padding: 0 4px 2px;
+}
+
+.route-chooser button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  min-height: 40px;
+  border-radius: 10px;
+  background: #fffaf0;
+  border: 1.5px solid #d9c79b;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.route-chooser__swatch {
+  width: 22px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  flex: 0 0 auto;
 }
 
 .route__hit {
@@ -1024,9 +1068,25 @@ button.train-card:not(:disabled):hover {
 }
 
 .market {
+  position: relative;
   display: grid;
   grid-template-columns: 5fr 2fr;
   gap: 8px;
+}
+
+.market__badge {
+  position: absolute;
+  z-index: 2;
+  top: -12px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--brass);
+  color: var(--navy);
+  font-weight: 900;
+  font-size: 0.72rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .market__cards {
@@ -1133,6 +1193,12 @@ button.train-card:not(:disabled):hover {
   box-shadow: 0 3px 0 #9c7c18;
 }
 
+.log-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--cream);
+  font-size: 0.68rem;
+}
+
 .tickets-btn:disabled {
   opacity: 0.5;
 }
@@ -1169,6 +1235,15 @@ button.train-card:not(:disabled):hover {
   border-left: 4px solid var(--pc);
   background: rgba(255, 255, 255, 0.04);
   border-radius: 0 8px 8px 0;
+}
+
+/* journal ouvert dans une fenêtre (mobile) */
+.sheet .log {
+  color: var(--ink);
+}
+
+.sheet .log li {
+  background: #fffaf0;
 }
 
 /* écran de passage d'appareil */
@@ -1791,11 +1866,84 @@ button.train-card:not(:disabled):hover {
   }
 }
 
-/* animation de pose des wagons */
+/* réglages */
 
-.anim-toggle.is-on span {
-  animation: none;
+.settings {
+  display: flex;
+  flex-direction: column;
 }
+
+.settings__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 2px;
+  border-bottom: 1px dashed #e0d1ad;
+}
+
+.settings__row--block {
+  flex-wrap: wrap;
+}
+
+.settings__icon {
+  font-size: 1.3rem;
+  width: 28px;
+  text-align: center;
+}
+
+.settings__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings__text small {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.settings__speeds {
+  flex-basis: 100%;
+  justify-content: space-between;
+}
+
+.settings__speeds button {
+  flex: 1;
+}
+
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  background: #cbbd9a;
+  transition: background 0.2s;
+}
+
+.switch.is-on {
+  background: var(--green);
+}
+
+.switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s;
+}
+
+.switch.is-on .switch__knob {
+  transform: translateX(22px);
+}
+
+/* animation de pose des wagons */
 
 .claim-fx__pts {
   font-family: var(--display);
@@ -2828,6 +2976,10 @@ button.train-card:not(:disabled):hover {
 /* ------------------------------------------------------------------ grands écrans */
 
 @media (min-width: 960px) {
+  .log-btn {
+    display: none;
+  }
+
   .game {
     grid-template-columns: minmax(0, 1fr) 380px;
     grid-template-rows: auto minmax(0, 1fr);

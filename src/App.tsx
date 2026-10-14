@@ -1,10 +1,13 @@
 import { AnimatePresence } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import type { PlayerConfig } from '../shared/types';
 import { Game } from './components/Game';
-import { IntroVideo, introSeen } from './components/IntroVideo';
 import { Home, Setup } from './components/Screens';
 import { api } from './lib/api';
+import { introSeen } from './lib/intro';
+
+// présentation chargée à la demande (première visite ou bouton de l'accueil)
+const IntroVideo = lazy(() => import('./components/IntroVideo').then((m) => ({ default: m.IntroVideo })));
 
 type Route = { name: 'home' } | { name: 'setup' } | { name: 'game'; id: number };
 
@@ -50,7 +53,13 @@ export default function App() {
   return (
     <>
       {screen}
-      <AnimatePresence>{showIntro && <IntroVideo key="intro" onClose={() => setShowIntro(false)} />}</AnimatePresence>
+      <AnimatePresence>
+        {showIntro && (
+          <Suspense key="intro" fallback={null}>
+            <IntroVideo onClose={() => setShowIntro(false)} />
+          </Suspense>
+        )}
+      </AnimatePresence>
     </>
   );
 }

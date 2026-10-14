@@ -1,0 +1,76 @@
+import { useSyncExternalStore } from 'react';
+
+/**
+ * Préférences de l'appareil (localStorage), partagées en direct entre les écrans.
+ * Les clés reprennent celles déjà utilisées pour ne pas perdre les réglages existants.
+ */
+
+export type BotSpeed = 'slow' | 'normal' | 'fast' | 'instant';
+
+export interface Prefs {
+  claimAnim: boolean;
+  introVoice: boolean;
+  showClaimable: boolean;
+  botSpeed: BotSpeed;
+}
+
+const KEYS: Record<keyof Prefs, string> = {
+  claimAnim: 'rdr.claimAnim',
+  introVoice: 'rdr.introVoice',
+  showClaimable: 'rdr.showClaimable',
+  botSpeed: 'rdr.botSpeed',
+};
+
+const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+const DEFAULTS = (): Prefs => ({
+  claimAnim: !reducedMotion(),
+  introVoice: true,
+  showClaimable: true,
+  botSpeed: 'normal',
+});
+
+const BOT_SPEEDS: BotSpeed[] = ['slow', 'normal', 'fast', 'instant'];
+
+function load(): Prefs {
+  const prefs = DEFAULTS();
+  try {
+    const flag = (k: 'claimAnim' | 'introVoice' | 'showClaimable') => {
+      const v = localStorage.getItem(KEYS[k]);
+      if (v !== null) prefs[k] = v === '1';
+    };
+    flag('claimAnim');
+    flag('introVoice');
+    flag('showClaimable');
+    const speed = localStorage.getItem(KEYS.botSpeed) as BotSpeed | null;
+    if (speed && BOT_SPEEDS.includes(speed)) prefs.botSpeed = speed;
+  } catch {
+    /* stockage indisponible : valeurs par défaut */
+  }
+  return prefs;
+}
+
+let current = load();
+const listeners = new Set<() => void>();
+
+export function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]) {
+  current = { ...current, [key]: value };
+  try {
+    localStorage.setItem(KEYS[key], typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
+  } catch {
+    /* stockage indisponible : le réglage vaut pour cette visite */
+  }
+  for (const fn of listeners) fn();
+}
+
+const subscribe = (fn: () => void) => {
+  listeners.add(fn);
+  return () => void listeners.delete(fn);
+};
+
+export function usePref<K extends keyof Prefs>(key: K): Prefs[K] {
+  return useSyncExternalStore(subscribe, () => current[key]);
+}
+
+/** Délai (ms) entre deux actions d'un ordinateur. */
+export const BOT_DELAYS: Record<BotSpeed, number> = { slow: 1300, normal: 750, fast: 300, instant: 0 };

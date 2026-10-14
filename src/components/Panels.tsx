@@ -52,6 +52,11 @@ export function Market({ state, canAct, onFaceUp, onDeck, onTickets, hint }: Mar
   const deckCount = state.deck.length + state.discard.length;
   return (
     <div className="market">
+      {secondDraw && canAct && (
+        <motion.span className="market__badge" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+          Carte 2/2
+        </motion.span>
+      )}
       <div className="market__cards">
         <AnimatePresence mode="popLayout">
           {state.market.map((c, i) =>

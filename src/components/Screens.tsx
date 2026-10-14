@@ -6,8 +6,7 @@ import type { BotLevel, PlayerColor, PlayerConfig } from '../../shared/types';
 import { OFFLINE, api, type GameSummary, type LeaderRow } from '../lib/api';
 import { PLAYER_COLOR_NAMES, PLAYER_FILL } from '../lib/theme';
 import { ConfirmDialog } from './ConfirmDialog';
-import { AnimToggle } from './AnimToggle';
-import { MusicToggle } from './MusicToggle';
+import { SettingsButton } from './Settings';
 import { Sheet } from './Tickets';
 import { TrainCard, WagonIcon } from './TrainCard';
 
@@ -71,8 +70,7 @@ export function Home({ onNew, onOpen, onIntro }: { onNew: () => void; onOpen: (i
     <div className="home">
       <div className="home__sky" />
       <div className="home__toggles">
-        <AnimToggle />
-        <MusicToggle />
+        <SettingsButton />
       </div>
       <header className="home__hero">
         <motion.p className="home__kicker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -88,9 +86,20 @@ export function Home({ onNew, onOpen, onIntro }: { onNew: () => void; onOpen: (i
       </header>
 
       <main className="home__main">
+        {ongoing[0] && (
+          <motion.button
+            type="button"
+            className="btn btn--primary btn--xl"
+            onClick={() => onOpen(ongoing[0].id)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            ▶ Reprendre la partie n°{ongoing[0].id}
+          </motion.button>
+        )}
         <motion.button
           type="button"
-          className="btn btn--primary btn--xl"
+          className={`btn btn--xl ${ongoing[0] ? '' : 'btn--primary'}`}
           onClick={onNew}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}

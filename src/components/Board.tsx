@@ -1,8 +1,8 @@
 import { motion } from 'motion/react';
-import { memo, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pan-pinch';
 import { CITIES, CITY_BY_ID, FRANCE_PATH, MAP_HEIGHT, MAP_LABELS, MAP_WIDTH, NEIGHBOR_PATHS, ROUTES, project } from '../../shared/map';
-import { ROUTE_POINTS } from '../../shared/engine';
+import { COLOR_NAMES, ROUTE_POINTS, routeName } from '../../shared/engine';
 import type { GameState, PlayerColor, Route } from '../../shared/types';
 import { PLAYER_FILL, PLAYER_LIGHT, ROUTE_FILL } from '../lib/theme';
 
@@ -55,6 +55,36 @@ const GEOMS: RouteGeom[] = ROUTES.map((route) => {
     y2: b.y - uy * margin + oy,
   };
 });
+
+/** Distance d'un point au segment d'une route (unités SVG). */
+function distToRoute(px: number, py: number, g: RouteGeom): number {
+  const dx = g.x2 - g.x1;
+  const dy = g.y2 - g.y1;
+  const t = Math.max(0, Math.min(1, ((px - g.x1) * dx + (py - g.y1) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(g.x1 + t * dx - px, g.y1 + t * dy - py);
+}
+
+/** Tolérance de toucher, en pixels écran, autour d'une route. */
+const TAP_TOLERANCE_PX = 18;
+/** En dessous de cet écart (px écran) entre deux routes, on laisse le joueur choisir. */
+const AMBIGUOUS_PX = 7;
+
+/** Recentre et zoome sur une route si elle paraît trop petite à l'écran. */
+function FocusRoute({ routeId }: { routeId: number | null }) {
+  const { zoomToElement, state } = useControls();
+  useEffect(() => {
+    if (routeId === null) return;
+    const el = document.getElementById(`route-${routeId}`);
+    if (!el) return;
+    const box = el.getBoundingClientRect();
+    const size = Math.max(box.width, box.height);
+    if (size >= 140) return; // déjà bien visible
+    const target = Math.min(5, Math.max(state.scale, (state.scale * 160) / Math.max(size, 1)));
+    void zoomToElement(el, target, 450);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeId]);
+  return null;
+}
 
 /** Durée (s) du trajet de la locomotive qui pose les wagons d'une route. */
 export const travelTime = (length: number) => 0.35 + 0.28 * length;
@@ -231,6 +261,8 @@ interface BoardProps {
   hintRoute?: number | null;
   /** Animation de pose des wagons (facultative). */
   claimAnim?: boolean;
+  /** Route sur laquelle recentrer la carte si elle est trop petite à l'écran. */
+  focusRoute?: number | null;
   onRouteClick: (id: number) => void;
 }
 
@@ -242,9 +274,13 @@ export function Board({
   flashRoute,
   hintRoute = null,
   claimAnim = false,
+  focusRoute = null,
   onRouteClick,
 }: BoardProps) {
   const down = useRef<{ x: number; y: number } | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  // routes candidates quand un toucher tombe entre deux voies (routes doubles, tronçons serrés)
+  const [chooser, setChooser] = useState<{ x: number; y: number; ids: number[] } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   // Zoom initial : en portrait (mobile), la carte remplit la hauteur disponible.
   const [fillScale, setFillScale] = useState<number | null>(null);
@@ -258,6 +294,30 @@ export function Board({
   const isTap = (e: React.MouseEvent) => {
     const d = down.current;
     return !d || Math.hypot(e.clientX - d.x, e.clientY - d.y) < 10;
+  };
+
+  /** Toucher généreux : on prend la route la plus proche dans un rayon de quelques pixels. */
+  const handleTap = (e: React.MouseEvent) => {
+    if (!isTap(e)) return;
+    const ctm = svgRef.current?.getScreenCTM();
+    if (!ctm) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+    const unit = 1 / ctm.a; // unités SVG par pixel écran
+    const hits = GEOMS.map((g) => ({ id: g.route.id, d: distToRoute(pt.x, pt.y, g) }))
+      .filter((h) => h.d <= TAP_TOLERANCE_PX * unit)
+      .sort((a, b) => a.d - b.d);
+    if (hits.length === 0) {
+      setChooser(null);
+      return;
+    }
+    const close = hits.filter((h) => h.d - hits[0].d <= AMBIGUOUS_PX * unit).map((h) => h.id);
+    if (close.length > 1) {
+      const box = e.currentTarget.closest('.board')!.getBoundingClientRect();
+      setChooser({ x: e.clientX - box.left, y: e.clientY - box.top, ids: close.slice(0, 3) });
+    } else {
+      setChooser(null);
+      onRouteClick(hits[0].id);
+    }
   };
 
   return (
@@ -278,8 +338,15 @@ export function Board({
         wheel={{ step: 0.15 }}
       >
         <ZoomControls />
+        <FocusRoute routeId={focusRoute} />
         <TransformComponent wrapperClass="board__wrapper" contentClass="board__content">
-          <svg viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} className="board__svg" preserveAspectRatio="xMidYMid meet">
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+            className="board__svg"
+            preserveAspectRatio="xMidYMid meet"
+            onClick={handleTap}
+          >
             <Background />
 
             {/* routes */}
@@ -292,8 +359,8 @@ export function Board({
               return (
                 <g
                   key={g.route.id}
+                  id={`route-${g.route.id}`}
                   className={`route ${owned ? 'route--owned' : ''} ${selected ? 'route--selected' : ''} ${canClaim ? 'route--claimable' : ''} ${flashRoute === g.route.id ? 'route--flash' : ''} ${hintRoute === g.route.id ? 'route--hint' : ''}`}
-                  onClick={(e) => isTap(e) && onRouteClick(g.route.id)}
                 >
                   <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__hit" />
                   {hintRoute === g.route.id && <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__hint" />}
@@ -363,6 +430,32 @@ export function Board({
           </svg>
         </TransformComponent>
       </TransformWrapper>
+      )}
+      {chooser && (
+        <div className="route-chooser" style={{ left: chooser.x, top: chooser.y }} role="menu" aria-label="Choisir une route">
+          <span className="route-chooser__title">Quelle route ?</span>
+          {chooser.ids.map((id) => {
+            const r = ROUTES[id];
+            const owner = state.owners[id];
+            return (
+              <button
+                key={id}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setChooser(null);
+                  onRouteClick(id);
+                }}
+              >
+                <span
+                  className="route-chooser__swatch"
+                  style={{ background: owner !== undefined ? PLAYER_FILL[state.players[owner].color] : ROUTE_FILL[r.color] }}
+                />
+                {routeName(r)} · {owner !== undefined ? state.players[owner].name : COLOR_NAMES[r.color]}
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );
