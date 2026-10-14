@@ -1,6 +1,8 @@
+import { AnimatePresence } from 'motion/react';
 import { useEffect, useState } from 'react';
 import type { PlayerConfig } from '../shared/types';
 import { Game } from './components/Game';
+import { IntroVideo, introSeen } from './components/IntroVideo';
 import { Home, Setup } from './components/Screens';
 import { api } from './lib/api';
 
@@ -15,6 +17,8 @@ function parseHash(): Route {
 
 export default function App() {
   const [route, setRoute] = useState<Route>(parseHash);
+  // présentation animée à la toute première ouverture, puis sur demande depuis l'accueil
+  const [showIntro, setShowIntro] = useState(() => !introSeen());
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash());
@@ -31,12 +35,22 @@ export default function App() {
     go(`#/partie/${id}`);
   };
 
+  let screen: React.ReactNode;
   switch (route.name) {
     case 'setup':
-      return <Setup onStart={start} onBack={() => go('#/')} />;
+      screen = <Setup onStart={start} onBack={() => go('#/')} />;
+      break;
     case 'game':
-      return <Game key={route.id} id={route.id} onExit={() => go('#/')} onNewGame={() => go('#/nouvelle')} />;
+      screen = <Game key={route.id} id={route.id} onExit={() => go('#/')} onNewGame={() => go('#/nouvelle')} />;
+      break;
     default:
-      return <Home onNew={() => go('#/nouvelle')} onOpen={(id) => go(`#/partie/${id}`)} />;
+      screen = <Home onNew={() => go('#/nouvelle')} onOpen={(id) => go(`#/partie/${id}`)} onIntro={() => setShowIntro(true)} />;
   }
+
+  return (
+    <>
+      {screen}
+      <AnimatePresence>{showIntro && <IntroVideo key="intro" onClose={() => setShowIntro(false)} />}</AnimatePresence>
+    </>
+  );
 }

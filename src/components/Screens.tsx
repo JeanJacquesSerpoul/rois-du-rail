@@ -46,7 +46,7 @@ function HeroTrain() {
   );
 }
 
-export function Home({ onNew, onOpen }: { onNew: () => void; onOpen: (id: number) => void }) {
+export function Home({ onNew, onOpen, onIntro }: { onNew: () => void; onOpen: (id: number) => void; onIntro: () => void }) {
   const [games, setGames] = useState<GameSummary[] | null>(null);
   const [leaders, setLeaders] = useState<LeaderRow[] | null>(null);
   const [sheet, setSheet] = useState<'rules' | 'stats' | null>(null);
@@ -93,6 +93,9 @@ export function Home({ onNew, onOpen }: { onNew: () => void; onOpen: (id: number
         >
           🚂 Nouvelle partie
         </motion.button>
+        <button type="button" className="btn btn--ghost" onClick={onIntro}>
+          🎬 Découvrir le jeu en vidéo
+        </button>
         <div className="home__row">
           <button type="button" className="btn" onClick={() => setSheet('rules')}>
             📜 Règles
