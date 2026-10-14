@@ -276,8 +276,9 @@ input {
 
 .hero-train {
   position: relative;
-  height: 64px;
-  margin: 28px -20px 0;
+  /* hauteur suffisante pour que la fumée ne soit pas rognée par overflow: hidden */
+  height: 104px;
+  margin: -12px -20px 0;
   overflow: hidden;
 }
 
