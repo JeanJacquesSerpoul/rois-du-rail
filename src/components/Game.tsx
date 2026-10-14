@@ -7,13 +7,25 @@ import type { Action, CardColor, GameEvent, GameState } from '../../shared/types
 import { api } from '../lib/api';
 import { PLAYER_FILL } from '../lib/theme';
 import { AdvisorSheet } from './Advisor';
-import { Board } from './Board';
+import { Board, travelTime } from './Board';
 import { EndScreen } from './EndScreen';
 import { MusicToggle } from './MusicToggle';
 import { ClaimSheet, EventLog, HandView, Market, PlayersBar, TicketsSheet, Toasts } from './Panels';
 import { TicketPicker } from './Tickets';
 
 const BOT_DELAY = 750;
+const CLAIM_ANIM_KEY = 'rdr.claimAnim';
+
+/** Animation de pose activée par défaut, sauf si l'appareil demande moins d'animations. */
+function initialClaimAnim(): boolean {
+  try {
+    const saved = localStorage.getItem(CLAIM_ANIM_KEY);
+    if (saved !== null) return saved === '1';
+  } catch {
+    /* stockage indisponible */
+  }
+  return !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
 
 export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void; onNewGame: () => void }) {
   const [state, setState] = useState<GameState | null>(null);
@@ -27,6 +39,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   const [lastHuman, setLastHuman] = useState<number | null>(null);
   const [toasts, setToasts] = useState<GameEvent[]>([]);
   const [flashRoute, setFlashRoute] = useState<number | null>(null);
+  const [claimAnim, setClaimAnim] = useState(initialClaimAnim);
   const [showEnd, setShowEnd] = useState(true);
   // chef de gare : conseil affiché dans sa fenêtre, puis gardé en surbrillance jusqu'au prochain coup
   const [advice, setAdvice] = useState<Advice | null>(null);
@@ -42,7 +55,8 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
     const claimed = fresh.filter((e) => e.kind === 'claimRoute').pop();
     if (claimed?.routeId !== undefined) {
       setFlashRoute(claimed.routeId);
-      setTimeout(() => setFlashRoute((r) => (r === claimed.routeId ? null : r)), 1800);
+      const duration = Math.max(1800, (travelTime(ROUTE_BY_ID[claimed.routeId].length) + 1.8) * 1000);
+      setTimeout(() => setFlashRoute((r) => (r === claimed.routeId ? null : r)), duration);
     }
     const shown = fresh.filter(
       (e) => next.players[e.seat].isBot || e.kind === 'lastRound' || e.kind === 'end' || e.kind === 'claimRoute',
@@ -157,6 +171,24 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           ←
         </button>
         <PlayersBar state={state} viewer={viewer} />
+        <button
+          type="button"
+          className={`music-toggle anim-toggle ${claimAnim ? 'is-on' : ''}`}
+          onClick={() => {
+            const next = !claimAnim;
+            setClaimAnim(next);
+            try {
+              localStorage.setItem(CLAIM_ANIM_KEY, next ? '1' : '0');
+            } catch {
+              /* stockage indisponible */
+            }
+          }}
+          aria-pressed={claimAnim}
+          aria-label={claimAnim ? 'Désactiver l’animation de pose des wagons' : 'Activer l’animation de pose des wagons'}
+          title="Animation de pose des wagons"
+        >
+          <span aria-hidden>🎞️</span>
+        </button>
         <MusicToggle />
       </header>
 
@@ -166,6 +198,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           selectedRoute={selectedRoute}
           highlightCities={hint ? [...preview, ...hint.cities] : preview}
           hintRoute={hint?.routeId ?? null}
+          claimAnim={claimAnim}
           claimable={claimable}
           flashRoute={flashRoute}
           onRouteClick={(rid) => setSelectedRoute(rid)}

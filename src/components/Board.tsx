@@ -2,7 +2,8 @@ import { motion } from 'motion/react';
 import { memo, useLayoutEffect, useRef, useState } from 'react';
 import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pan-pinch';
 import { CITIES, CITY_BY_ID, FRANCE_PATH, MAP_HEIGHT, MAP_LABELS, MAP_WIDTH, NEIGHBOR_PATHS, ROUTES, project } from '../../shared/map';
-import type { GameState, Route } from '../../shared/types';
+import { ROUTE_POINTS } from '../../shared/engine';
+import type { GameState, PlayerColor, Route } from '../../shared/types';
 import { PLAYER_FILL, PLAYER_LIGHT, ROUTE_FILL } from '../lib/theme';
 
 const CITY_R = 8;
@@ -54,6 +55,94 @@ const GEOMS: RouteGeom[] = ROUTES.map((route) => {
     y2: b.y - uy * margin + oy,
   };
 });
+
+/** Durée (s) du trajet de la locomotive qui pose les wagons d'une route. */
+export const travelTime = (length: number) => 0.35 + 0.28 * length;
+
+/**
+ * Animation de pose d'une route : une locomotive parcourt le tronçon en laissant
+ * ses wagons derrière elle, de la vapeur, des ondes aux deux villes et les points gagnés.
+ */
+function ClaimFx({ g, color }: { g: RouteGeom; color: PlayerColor }) {
+  const len = g.route.length;
+  const T = travelTime(len);
+  const angle = g.wagons[0].angle;
+  const mx = (g.x1 + g.x2) / 2;
+  const my = (g.y1 + g.y2) / 2;
+  const a = CITY_BY_ID[g.route.a];
+  const b = CITY_BY_ID[g.route.b];
+  const ring = { transformBox: 'fill-box', transformOrigin: 'center' } as const;
+  return (
+    <g className="claim-fx" pointerEvents="none">
+      <motion.line
+        x1={g.x1}
+        y1={g.y1}
+        x2={g.x2}
+        y2={g.y2}
+        stroke={PLAYER_LIGHT[color]}
+        strokeWidth="16"
+        strokeLinecap="round"
+        initial={{ pathLength: 0, opacity: 0.75 }}
+        animate={{ pathLength: 1, opacity: [0.75, 0.75, 0] }}
+        transition={{ pathLength: { duration: T, ease: 'linear' }, opacity: { duration: T + 0.7, times: [0, 0.7, 1] } }}
+      />
+      {g.wagons.map((w, i) => (
+        <motion.circle
+          key={i}
+          cx={w.x}
+          cy={w.y}
+          r="4"
+          fill="#fff"
+          style={ring}
+          initial={{ opacity: 0, scale: 0.4 }}
+          animate={{ opacity: [0, 0.85, 0], scale: [0.4, 1.8, 2.8], y: [0, -10, -20] }}
+          transition={{ delay: (T * (i + 0.5)) / len, duration: 1.1 }}
+        />
+      ))}
+      {[a, b].map((c, i) => (
+        <motion.circle
+          key={c.id}
+          cx={c.x}
+          cy={c.y}
+          r="10"
+          fill="none"
+          stroke={PLAYER_FILL[color]}
+          strokeWidth="4"
+          style={ring}
+          initial={{ opacity: 0, scale: 1 }}
+          animate={{ opacity: [0, 0.9, 0], scale: [1, 2.2, 3.2] }}
+          transition={{ delay: i === 0 ? 0 : T, duration: 0.9 }}
+        />
+      ))}
+      <motion.g
+        initial={{ x: g.x1, y: g.y1, opacity: 0 }}
+        animate={{ x: g.x2, y: g.y2, opacity: [0, 1, 1, 0] }}
+        transition={{ x: { duration: T, ease: 'linear' }, y: { duration: T, ease: 'linear' }, opacity: { duration: T + 0.3, times: [0, 0.1, 0.85, 1] } }}
+      >
+        <g transform={`rotate(${angle})`}>
+          <ellipse cx="0" cy="3" rx="15" ry="6" fill="#000" opacity=".25" />
+          <rect x="-14" y="-8" width="10" height="15" rx="1.8" fill={PLAYER_FILL[color]} stroke="#1b1206" strokeWidth="1.2" />
+          <rect x="-12" y="-6" width="6" height="5" rx="1" fill={PLAYER_LIGHT[color]} />
+          <rect x="-5" y="-5.5" width="16" height="11" rx="5.5" fill={PLAYER_FILL[color]} stroke="#1b1206" strokeWidth="1.2" />
+          <path d="M11 -5 L16 0 L11 5 Z" fill="#1b1206" />
+          <circle cx="6" cy="0" r="2.8" fill="#1b1206" />
+          <circle cx="-1" cy="0" r="1.6" fill={PLAYER_LIGHT[color]} />
+        </g>
+      </motion.g>
+      <g transform={`translate(${mx} ${my})`}>
+        <motion.g
+          initial={{ opacity: 0, y: 0, scale: 0.4 }}
+          animate={{ opacity: [0, 1, 1, 0], y: [0, -12, -30, -42], scale: [0.4, 1.25, 1, 1] }}
+          transition={{ delay: T, duration: 1.5, times: [0, 0.2, 0.75, 1] }}
+        >
+          <text className="claim-fx__pts" textAnchor="middle" dy="-14">
+            +{ROUTE_POINTS[len]}
+          </text>
+        </motion.g>
+      </g>
+    </g>
+  );
+}
 
 const LABEL_OFFSET: Record<string, [number, number, 'start' | 'middle' | 'end']> = {
   n: [0, -13, 'middle'],
@@ -140,10 +229,21 @@ interface BoardProps {
   flashRoute: number | null;
   /** Route conseillée par le chef de gare. */
   hintRoute?: number | null;
+  /** Animation de pose des wagons (facultative). */
+  claimAnim?: boolean;
   onRouteClick: (id: number) => void;
 }
 
-export function Board({ state, selectedRoute, highlightCities, claimable, flashRoute, hintRoute = null, onRouteClick }: BoardProps) {
+export function Board({
+  state,
+  selectedRoute,
+  highlightCities,
+  claimable,
+  flashRoute,
+  hintRoute = null,
+  claimAnim = false,
+  onRouteClick,
+}: BoardProps) {
   const down = useRef<{ x: number; y: number } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   // Zoom initial : en portrait (mobile), la carte remplit la hauteur disponible.
@@ -206,7 +306,16 @@ export function Board({ state, selectedRoute, highlightCities, claimable, flashR
                         <motion.g
                           initial={{ scale: 0, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
-                          transition={{ delay: i * 0.08, type: 'spring', stiffness: 320, damping: 18 }}
+                          transition={{
+                            // avec l'animation de pose, chaque wagon apparaît au passage de la locomotive
+                            delay:
+                              claimAnim && flashRoute === g.route.id
+                                ? (travelTime(g.route.length) * (i + 0.5)) / g.route.length
+                                : i * 0.08,
+                            type: 'spring',
+                            stiffness: 320,
+                            damping: 18,
+                          }}
                         >
                           <rect x={-w.w / 2 - 1} y={-WAGON_H / 2 - 1.5} width={w.w + 2} height={WAGON_H + 3} rx="2.6" fill={PLAYER_FILL[pColor]} stroke="#1b1206" strokeWidth="1" />
                           <rect x={-w.w / 2 + 2} y={-WAGON_H / 2 + 0.8} width={w.w - 4} height={2.4} rx="1" fill={PLAYER_LIGHT[pColor]} opacity=".8" />
@@ -247,6 +356,10 @@ export function Board({ state, selectedRoute, highlightCities, claimable, flashR
                 </g>
               );
             })}
+
+            {claimAnim && flashRoute !== null && state.owners[flashRoute] !== undefined && (
+              <ClaimFx key={flashRoute} g={GEOMS[flashRoute]} color={state.players[state.owners[flashRoute]].color} />
+            )}
           </svg>
         </TransformComponent>
       </TransformWrapper>
