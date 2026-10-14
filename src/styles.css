@@ -1172,6 +1172,7 @@ button.train-card:not(:disabled):hover {
 }
 
 .sheet {
+  color: var(--ink);
   width: 100%;
   max-width: 600px;
   max-height: 88dvh;
@@ -1516,6 +1517,7 @@ button.train-card:not(:disabled):hover {
 }
 
 .end {
+  color: var(--ink);
   position: relative;
   max-width: 640px;
   margin: 0 auto;
