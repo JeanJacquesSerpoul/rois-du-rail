@@ -4,6 +4,7 @@ import { CITY_BY_ID, FRANCE_PATH, MAP_HEIGHT, MAP_WIDTH, ROUTES, TICKETS } from 
 import type { CardColor } from '../../shared/types';
 import { markIntroSeen as markSeen } from '../lib/intro';
 import { setPref, usePref } from '../lib/prefs';
+import { useFocusTrap } from '../lib/useFocusTrap';
 import { CARD_FILL, PLAYER_FILL, ROUTE_FILL } from '../lib/theme';
 import { TicketCard } from './Tickets';
 import { TrainCard, WagonIcon } from './TrainCard';
@@ -420,6 +421,8 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
   const [elapsed, setElapsed] = useState(0); // secondes écoulées dans le chapitre
   const voiceOn = usePref('introVoice');
   const voice = useVoice(voiceOn);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef); // Échap est déjà géré par le lecteur
 
   const close = useCallback(() => {
     voice.stop();
@@ -496,6 +499,7 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
   return (
     <motion.div className="dialog-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div
+        ref={dialogRef}
         className="intro"
         role="dialog"
         aria-modal="true"

@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { useEffect, useRef } from 'react';
+import { useFocusTrap } from '../lib/useFocusTrap';
 
 interface Props {
   title: string;
@@ -25,15 +26,12 @@ export function ConfirmDialog({
 }: Props) {
   const cancelRef = useRef<HTMLButtonElement>(null);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // focus sur « Annuler » : une validation accidentelle au clavier ne supprime rien
     cancelRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
+  }, []);
+  useFocusTrap(dialogRef, onCancel);
 
   return (
     <motion.div
@@ -44,6 +42,7 @@ export function ConfirmDialog({
       onClick={onCancel}
     >
       <motion.div
+        ref={dialogRef}
         className="dialog"
         role="alertdialog"
         aria-modal="true"

@@ -51,3 +51,17 @@ export const PLAYER_COLOR_NAMES: Record<PlayerColor, string> = {
   amber: 'Ambre',
   violet: 'Violet',
 };
+
+/** Symboles du mode daltonien : chaque couleur se reconnaît aussi par sa forme. */
+export const COLOR_SYMBOL: Record<CardColor | 'gray', string> = {
+  red: '♥',
+  orange: '◆',
+  yellow: '★',
+  green: '♣',
+  blue: '●',
+  purple: '▲',
+  black: '■',
+  white: '○',
+  loco: '✦',
+  gray: '',
+};

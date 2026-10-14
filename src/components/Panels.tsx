@@ -3,7 +3,8 @@ import { CARD_COLORS, COLOR_NAMES, ROUTE_POINTS, claimStatus, handSize, paymentO
 import { BOT_LEVEL_NAMES } from '../../shared/bot';
 import { CITY_BY_ID, ROUTE_BY_ID, TICKET_BY_ID } from '../../shared/map';
 import type { CardColor, GameEvent, GameState } from '../../shared/types';
-import { CARD_FILL, PLAYER_FILL, PLAYER_LIGHT, ROUTE_FILL } from '../lib/theme';
+import { usePref } from '../lib/prefs';
+import { CARD_FILL, CARD_INK, COLOR_SYMBOL, PLAYER_FILL, PLAYER_LIGHT, ROUTE_FILL } from '../lib/theme';
 import { Sheet, TicketCard } from './Tickets';
 import { TrainCard, WagonIcon } from './TrainCard';
 
@@ -151,6 +152,7 @@ export function ClaimSheet({ state, routeId, seat, busy, onClaim, onClose }: Cla
   const owner = state.owners[routeId];
   const status = seat === null ? 'notYourTurn' : claimStatus(state, seat, routeId);
   const options = seat === null ? [] : paymentOptions(state.players[seat].hand, route);
+  const colorBlind = usePref('colorBlind');
   return (
     <Sheet title={routeName(route)} onClose={onClose}>
       <div className="claim">
@@ -159,8 +161,13 @@ export function ClaimSheet({ state, routeId, seat, busy, onClaim, onClose }: Cla
             <span
               key={i}
               className="claim__slot"
-              style={{ background: owner !== undefined ? PLAYER_FILL[state.players[owner].color] : ROUTE_FILL[route.color] }}
-            />
+              style={{
+                background: owner !== undefined ? PLAYER_FILL[state.players[owner].color] : ROUTE_FILL[route.color],
+                color: CARD_INK[route.color],
+              }}
+            >
+              {colorBlind && owner === undefined ? COLOR_SYMBOL[route.color] : null}
+            </span>
           ))}
         </div>
         <p className="claim__meta">
@@ -187,7 +194,9 @@ export function ClaimSheet({ state, routeId, seat, busy, onClaim, onClose }: Cla
                 >
                   {p.colored > 0 && (
                     <span className="pay-option__part">
-                      <span className="pay-dot" style={{ background: CARD_FILL[p.color] }} /> ×{p.colored}
+                      <span className="pay-dot" style={{ background: CARD_FILL[p.color], color: CARD_INK[p.color] }}>
+                        {colorBlind ? COLOR_SYMBOL[p.color] : null}
+                      </span> ×{p.colored}
                     </span>
                   )}
                   {p.locos > 0 && (

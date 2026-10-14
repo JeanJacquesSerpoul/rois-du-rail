@@ -1,5 +1,5 @@
 import { botAction, neededRoutes, pendingTickets, planPath } from './bot';
-import { ROUTE_POINTS, computePayment, routeName, ticketDone } from './engine';
+import { CARD_ADJ, ROUTE_POINTS, computePayment, routeName, ticketDone } from './engine';
 import { CITY_BY_ID, ROUTE_BY_ID, TICKET_BY_ID } from './map';
 import type { Action, CardColor, GameState, Route } from './types';
 
@@ -38,18 +38,6 @@ const ticketLabel = (id: number) => {
 
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
 
-/** Couleurs accordées avec « carte » (féminin). */
-const CARD_ADJ: Record<CardColor, string> = {
-  red: 'rouge',
-  orange: 'orange',
-  yellow: 'jaune',
-  green: 'verte',
-  blue: 'bleue',
-  purple: 'violette',
-  black: 'noire',
-  white: 'blanche',
-  loco: 'locomotive',
-};
 
 function cardsPhrase(color: CardColor, n: number): string {
   if (color === 'loco') return plural(n, 'locomotive');

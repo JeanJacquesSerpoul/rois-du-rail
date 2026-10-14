@@ -620,6 +620,23 @@ button.train-card:not(:disabled):hover {
   transform: translateY(-3px);
 }
 
+.train-card__symbol {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  z-index: 1;
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--ink);
+  text-shadow: 0 0 2px var(--card);
+}
+
+.train-card--loco .train-card__symbol {
+  color: #fff;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
 .train-card__count {
   position: absolute;
   top: -8px;
@@ -852,6 +869,21 @@ button.train-card:not(:disabled):hover {
 .route--flash .route__hit {
   stroke: #ffe680;
   animation: flash 0.6s ease-in-out 3;
+}
+
+.route:focus {
+  outline: none;
+}
+
+.route:focus-visible .route__hit {
+  stroke: #ffd84a;
+  stroke-opacity: 0.95;
+}
+
+.route__symbol {
+  font-size: 8px;
+  font-weight: 900;
+  pointer-events: none;
 }
 
 .route__slot {
@@ -1306,6 +1338,10 @@ button.train-card:not(:disabled):hover {
   padding: 18px 16px calc(18px + var(--safe-b));
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.35);
   border-top: 4px solid var(--brass);
+}
+
+.sheet:focus {
+  outline: none;
 }
 
 .sheet__head {
@@ -2362,6 +2398,10 @@ button.train-card:not(:disabled):hover {
 }
 
 .claim__slot {
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 900;
   width: 42px;
   height: 18px;
   border-radius: 4px;
@@ -2429,11 +2469,14 @@ button.train-card:not(:disabled):hover {
 }
 
 .pay-dot {
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 900;
   width: 26px;
   height: 18px;
   border-radius: 4px;
   border: 1.5px solid rgba(0, 0, 0, 0.35);
-  display: inline-block;
 }
 
 .pay-dot--loco {
@@ -3098,6 +3141,14 @@ button.train-card:not(:disabled):hover {
 
   .hand > div {
     width: 46px;
+  }
+}
+
+/* téléphone : noms de villes plus grands pour rester lisibles au zoom initial */
+@media (max-width: 600px) {
+  .city__label {
+    font-size: 18px;
+    stroke-width: 4.5px;
   }
 }
 

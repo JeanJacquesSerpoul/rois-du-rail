@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useFocusTrap } from '../lib/useFocusTrap';
 import { CITY_BY_ID, FRANCE_PATH, MAP_HEIGHT, MAP_WIDTH, NEIGHBOR_PATHS, TICKET_BY_ID } from '../../shared/map';
 
 interface TicketCardProps {
@@ -120,9 +121,14 @@ export function Sheet({
   children: React.ReactNode;
   onClose?: () => void;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useFocusTrap(ref, onClose);
   return (
     <motion.div className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div
+        ref={ref}
+        tabIndex={-1}
+        aria-modal="true"
         className="sheet"
         initial={{ y: 60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

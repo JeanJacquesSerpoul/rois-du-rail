@@ -31,6 +31,19 @@ export const COLOR_NAMES: Record<CardColor | 'gray', string> = {
   gray: 'gris',
 };
 
+/** Couleurs accordées avec « carte » (féminin). */
+export const CARD_ADJ: Record<CardColor, string> = {
+  red: 'rouge',
+  orange: 'orange',
+  yellow: 'jaune',
+  green: 'verte',
+  blue: 'bleue',
+  purple: 'violette',
+  black: 'noire',
+  white: 'blanche',
+  loco: 'locomotive',
+};
+
 export class GameError extends Error {}
 
 function fail(msg: string): never {

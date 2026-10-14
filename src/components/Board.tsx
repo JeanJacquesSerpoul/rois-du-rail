@@ -4,7 +4,8 @@ import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pa
 import { CITIES, CITY_BY_ID, FRANCE_PATH, MAP_HEIGHT, MAP_LABELS, MAP_WIDTH, NEIGHBOR_PATHS, ROUTES, project } from '../../shared/map';
 import { COLOR_NAMES, ROUTE_POINTS, routeName } from '../../shared/engine';
 import type { GameState, PlayerColor, Route } from '../../shared/types';
-import { PLAYER_FILL, PLAYER_LIGHT, ROUTE_FILL } from '../lib/theme';
+import { usePref } from '../lib/prefs';
+import { CARD_INK, COLOR_SYMBOL, PLAYER_FILL, PLAYER_LIGHT, ROUTE_FILL } from '../lib/theme';
 
 const CITY_R = 8;
 const WAGON_H = 9;
@@ -279,6 +280,7 @@ export function Board({
 }: BoardProps) {
   const down = useRef<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const colorBlind = usePref('colorBlind');
   // routes candidates quand un toucher tombe entre deux voies (routes doubles, tronçons serrés)
   const [chooser, setChooser] = useState<{ x: number; y: number; ids: number[] } | null>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -360,6 +362,20 @@ export function Board({
                 <g
                   key={g.route.id}
                   id={`route-${g.route.id}`}
+                  // routes jouables (et route conseillée) atteignables au clavier
+                  tabIndex={canClaim || hintRoute === g.route.id ? 0 : undefined}
+                  role={canClaim || hintRoute === g.route.id ? 'button' : undefined}
+                  aria-label={
+                    canClaim || hintRoute === g.route.id
+                      ? `${routeName(g.route)}, ${g.route.length} wagon${g.route.length > 1 ? 's' : ''}, ${COLOR_NAMES[g.route.color]}`
+                      : undefined
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onRouteClick(g.route.id);
+                    }
+                  }}
                   className={`route ${owned ? 'route--owned' : ''} ${selected ? 'route--selected' : ''} ${canClaim ? 'route--claimable' : ''} ${flashRoute === g.route.id ? 'route--flash' : ''} ${hintRoute === g.route.id ? 'route--hint' : ''}`}
                 >
                   <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__hit" />
@@ -401,6 +417,12 @@ export function Board({
                           strokeWidth="1"
                           className="route__slot"
                         />
+                      )}
+                      {!owned && colorBlind && g.route.color !== 'gray' && (
+                        // le symbole reste droit quel que soit le sens de la route
+                        <text className="route__symbol" transform={`rotate(${-w.angle})`} fill={CARD_INK[g.route.color]} textAnchor="middle" dy="2.6">
+                          {COLOR_SYMBOL[g.route.color]}
+                        </text>
                       )}
                     </g>
                   ))}

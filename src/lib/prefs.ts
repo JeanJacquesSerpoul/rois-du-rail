@@ -12,6 +12,7 @@ export interface Prefs {
   introVoice: boolean;
   showClaimable: boolean;
   botSpeed: BotSpeed;
+  colorBlind: boolean;
 }
 
 const KEYS: Record<keyof Prefs, string> = {
@@ -19,6 +20,7 @@ const KEYS: Record<keyof Prefs, string> = {
   introVoice: 'rdr.introVoice',
   showClaimable: 'rdr.showClaimable',
   botSpeed: 'rdr.botSpeed',
+  colorBlind: 'rdr.colorBlind',
 };
 
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -28,6 +30,7 @@ const DEFAULTS = (): Prefs => ({
   introVoice: true,
   showClaimable: true,
   botSpeed: 'normal',
+  colorBlind: false,
 });
 
 const BOT_SPEEDS: BotSpeed[] = ['slow', 'normal', 'fast', 'instant'];
@@ -35,13 +38,14 @@ const BOT_SPEEDS: BotSpeed[] = ['slow', 'normal', 'fast', 'instant'];
 function load(): Prefs {
   const prefs = DEFAULTS();
   try {
-    const flag = (k: 'claimAnim' | 'introVoice' | 'showClaimable') => {
+    const flag = (k: 'claimAnim' | 'introVoice' | 'showClaimable' | 'colorBlind') => {
       const v = localStorage.getItem(KEYS[k]);
       if (v !== null) prefs[k] = v === '1';
     };
     flag('claimAnim');
     flag('introVoice');
     flag('showClaimable');
+    flag('colorBlind');
     const speed = localStorage.getItem(KEYS.botSpeed) as BotSpeed | null;
     if (speed && BOT_SPEEDS.includes(speed)) prefs.botSpeed = speed;
   } catch {

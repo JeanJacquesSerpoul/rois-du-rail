@@ -50,6 +50,7 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
   const showClaimable = usePref('showClaimable');
   const introVoice = usePref('introVoice');
   const botSpeed = usePref('botSpeed');
+  const colorBlind = usePref('colorBlind');
 
   return (
     <Sheet title="Réglages" subtitle="Enregistrés sur cet appareil." onClose={onClose}>
@@ -71,6 +72,9 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
         </Row>
         <Row icon="✨" title="Routes jouables en évidence" hint="Pendant votre tour, les routes que vous pouvez payer scintillent.">
           <Switch on={showClaimable} label="Routes jouables en évidence" onChange={(v) => setPref('showClaimable', v)} />
+        </Row>
+        <Row icon="👁️" title="Mode daltonien" hint="Un symbole sur chaque couleur de carte et de route (♥ ◆ ★ ♣ ● ▲ ■ ○).">
+          <Switch on={colorBlind} label="Mode daltonien" onChange={(v) => setPref('colorBlind', v)} />
         </Row>
         <Row icon="🔊" title="Voix off de la présentation">
           <Switch on={introVoice} label="Voix off de la présentation" onChange={(v) => setPref('introVoice', v)} />
