@@ -6,6 +6,7 @@ import { useSyncExternalStore } from 'react';
  */
 
 export type BotSpeed = 'slow' | 'normal' | 'fast' | 'instant';
+export type MapTheme = 'auto' | 'day' | 'dusk';
 
 export interface Prefs {
   claimAnim: boolean;
@@ -13,6 +14,8 @@ export interface Prefs {
   showClaimable: boolean;
   botSpeed: BotSpeed;
   colorBlind: boolean;
+  sfx: boolean;
+  mapTheme: MapTheme;
 }
 
 const KEYS: Record<keyof Prefs, string> = {
@@ -21,6 +24,8 @@ const KEYS: Record<keyof Prefs, string> = {
   showClaimable: 'rdr.showClaimable',
   botSpeed: 'rdr.botSpeed',
   colorBlind: 'rdr.colorBlind',
+  sfx: 'rdr.sfx',
+  mapTheme: 'rdr.mapTheme',
 };
 
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -31,6 +36,8 @@ const DEFAULTS = (): Prefs => ({
   showClaimable: true,
   botSpeed: 'normal',
   colorBlind: false,
+  sfx: true,
+  mapTheme: 'auto',
 });
 
 const BOT_SPEEDS: BotSpeed[] = ['slow', 'normal', 'fast', 'instant'];
@@ -38,7 +45,7 @@ const BOT_SPEEDS: BotSpeed[] = ['slow', 'normal', 'fast', 'instant'];
 function load(): Prefs {
   const prefs = DEFAULTS();
   try {
-    const flag = (k: 'claimAnim' | 'introVoice' | 'showClaimable' | 'colorBlind') => {
+    const flag = (k: 'claimAnim' | 'introVoice' | 'showClaimable' | 'colorBlind' | 'sfx') => {
       const v = localStorage.getItem(KEYS[k]);
       if (v !== null) prefs[k] = v === '1';
     };
@@ -46,6 +53,9 @@ function load(): Prefs {
     flag('introVoice');
     flag('showClaimable');
     flag('colorBlind');
+    flag('sfx');
+    const theme = localStorage.getItem(KEYS.mapTheme) as MapTheme | null;
+    if (theme && ['auto', 'day', 'dusk'].includes(theme)) prefs.mapTheme = theme;
     const speed = localStorage.getItem(KEYS.botSpeed) as BotSpeed | null;
     if (speed && BOT_SPEEDS.includes(speed)) prefs.botSpeed = speed;
   } catch {
@@ -71,6 +81,11 @@ const subscribe = (fn: () => void) => {
   listeners.add(fn);
   return () => void listeners.delete(fn);
 };
+
+/** Lecture ponctuelle (hors composant React). */
+export function getPref<K extends keyof Prefs>(key: K): Prefs[K] {
+  return current[key];
+}
 
 export function usePref<K extends keyof Prefs>(key: K): Prefs[K] {
   return useSyncExternalStore(subscribe, () => current[key]);

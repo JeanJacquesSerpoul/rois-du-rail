@@ -6,12 +6,14 @@
 @import "./setup.css";
 @import "./cards.css";
 @import "./board.css";
+@import "./map-theme.css";
 @import "./panel.css";
 @import "./sheets.css";
 @import "./intro.css";
 @import "./settings.css";
 @import "./claim-fx.css";
 @import "./tutorial.css";
+@import "./celebrate.css";
 @import "./advisor.css";
 @import "./dialog.css";
 @import "./tickets.css";

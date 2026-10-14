@@ -209,39 +209,68 @@ const LABEL_OFFSET: Record<string, [number, number, 'start' | 'middle' | 'end']>
   sw: [-9, 16, 'end'],
 };
 
+/** Grain de papier : bruit généré une fois (SVG en data URI), répété en motif sur toute la carte. */
+const PAPER_NOISE = `data:image/svg+xml;utf8,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.32  0 0 0 0 0.22  0 0 0 0 0.08  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>",
+)}`;
+
+/** Fond de la carte. Les couleurs viennent de variables CSS (--map-*) : thème jour ou crépuscule. */
 const Background = memo(function Background() {
   const [cx, cy] = project(-3.9, 44.4);
   return (
     <g>
       <defs>
         <pattern id="waves" width="34" height="16" patternUnits="userSpaceOnUse">
-          <path d="M0 8 q8.5 -6 17 0 t17 0" fill="none" stroke="#7fa7ae" strokeOpacity=".28" strokeWidth="1.2" />
+          <path
+            d="M0 8 q8.5 -6 17 0 t17 0"
+            fill="none"
+            style={{ stroke: 'var(--map-wave)' }}
+            strokeOpacity=".28"
+            strokeWidth="1.2"
+          />
         </pattern>
         <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <line x1="0" y1="0" x2="0" y2="7" stroke="#a38f6a" strokeOpacity=".22" strokeWidth="1.4" />
+          <line x1="0" y1="0" x2="0" y2="7" style={{ stroke: 'var(--map-hatch)' }} strokeOpacity=".22" strokeWidth="1.4" />
+        </pattern>
+        <pattern id="paper" width="160" height="160" patternUnits="userSpaceOnUse">
+          <image href={PAPER_NOISE} width="160" height="160" />
         </pattern>
         <radialGradient id="land" cx="50%" cy="45%" r="65%">
-          <stop offset="0%" stopColor="#f7ecd2" />
-          <stop offset="100%" stopColor="#e9d6ad" />
+          <stop offset="0%" style={{ stopColor: 'var(--map-land-1)' }} />
+          <stop offset="100%" style={{ stopColor: 'var(--map-land-2)' }} />
         </radialGradient>
         <radialGradient id="vignette" cx="50%" cy="50%" r="75%">
-          <stop offset="65%" stopColor="#000" stopOpacity="0" />
-          <stop offset="100%" stopColor="#3a2a10" stopOpacity=".28" />
+          <stop offset="60%" stopColor="#000" stopOpacity="0" />
+          <stop offset="100%" style={{ stopColor: 'var(--map-vignette)', stopOpacity: 'var(--map-vignette-opacity)' }} />
         </radialGradient>
+        <linearGradient id="fold" x1="0" x2="1">
+          <stop offset="0%" stopColor="#000" stopOpacity="0" />
+          <stop offset="48%" stopColor="#000" stopOpacity=".06" />
+          <stop offset="50%" stopColor="#fff" stopOpacity=".18" />
+          <stop offset="52%" stopColor="#000" stopOpacity=".06" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0" />
+        </linearGradient>
         <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
           <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#3b2b12" floodOpacity=".35" />
         </filter>
       </defs>
-      <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="#b9d3d3" />
+      <rect width={MAP_WIDTH} height={MAP_HEIGHT} className="map-sea" />
       <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#waves)" />
       {NEIGHBOR_PATHS.map((d, i) => (
         <g key={i}>
-          <path d={d} fill="#e2d6b8" stroke="#a08d66" strokeWidth="1.2" />
+          <path d={d} className="map-neighbor" strokeWidth="1.2" />
           <path d={d} fill="url(#hatch)" />
         </g>
       ))}
-      <path d={FRANCE_PATH} fill="url(#land)" stroke="#7a5c2e" strokeWidth="2.2" strokeLinejoin="round" filter="url(#shadow)" />
-      <path d={FRANCE_PATH} fill="none" stroke="#7a5c2e" strokeOpacity=".25" strokeWidth="7" strokeLinejoin="round" />
+      <path
+        d={FRANCE_PATH}
+        fill="url(#land)"
+        className="map-coast"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+        filter="url(#shadow)"
+      />
+      <path d={FRANCE_PATH} fill="none" className="map-coast" strokeOpacity=".25" strokeWidth="7" strokeLinejoin="round" />
       {MAP_LABELS.map((l) => {
         const [x, y] = project(l.lon, l.lat);
         return (
@@ -261,10 +290,33 @@ const Background = memo(function Background() {
           N
         </text>
       </g>
+      {/* papier : grain et plis d'une vieille carte dépliée */}
+      <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#paper)" className="map-paper" pointerEvents="none" />
+      <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#fold)" pointerEvents="none" />
+      <rect
+        width={MAP_WIDTH}
+        height={MAP_HEIGHT}
+        fill="url(#fold)"
+        transform={`rotate(90 ${MAP_WIDTH / 2} ${MAP_HEIGHT / 2})`}
+        opacity=".7"
+        pointerEvents="none"
+      />
       <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#vignette)" pointerEvents="none" />
     </g>
   );
 });
+
+/** Thème de carte effectif : en automatique, crépuscule de 19 h à 7 h. */
+function useMapTheme(): 'day' | 'dusk' {
+  const pref = usePref('mapTheme');
+  const [hour, setHour] = useState(() => new Date().getHours());
+  useEffect(() => {
+    const t = setInterval(() => setHour(new Date().getHours()), 5 * 60 * 1000);
+    return () => clearInterval(t);
+  }, []);
+  if (pref !== 'auto') return pref;
+  return hour >= 19 || hour < 7 ? 'dusk' : 'day';
+}
 
 interface RouteViewProps {
   g: RouteGeom;
@@ -417,6 +469,8 @@ interface BoardProps {
   focusRoute?: number | null;
   /** Calque des trajets de destinations. */
   plans?: PlanOverlay[];
+  /** Villes d'un billet tout juste réalisé (ondes de célébration). */
+  burstCities?: string[];
   onRouteClick: (id: number) => void;
 }
 
@@ -430,11 +484,13 @@ export function Board({
   claimAnim = false,
   focusRoute = null,
   plans = [],
+  burstCities = [],
   onRouteClick,
 }: BoardProps) {
   const down = useRef<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const colorBlind = usePref('colorBlind');
+  const theme = useMapTheme();
   // routes candidates quand un toucher tombe entre deux voies (routes doubles, tronçons serrés)
   const [chooser, setChooser] = useState<{ x: number; y: number; ids: number[] } | null>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -485,6 +541,7 @@ export function Board({
     <div
       ref={box}
       className="board"
+      data-theme={theme}
       onPointerDownCapture={(e) => {
         down.current = { x: e.clientX, y: e.clientY };
       }}
@@ -567,6 +624,27 @@ export function Board({
                 );
               })}
 
+              {/* célébration d'un billet réalisé : ondes vertes sur ses deux villes */}
+              {burstCities.map((id) => {
+                const c = CITY_BY_ID[id];
+                return (
+                  <g key={`burst-${id}`} pointerEvents="none">
+                    {[0, 0.35, 0.7].map((d) => (
+                      <motion.circle
+                        key={d}
+                        cx={c.x}
+                        cy={c.y}
+                        r={CITY_R + 4}
+                        className="city-burst"
+                        style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+                        initial={{ scale: 0.6, opacity: 0.9 }}
+                        animate={{ scale: 4, opacity: 0 }}
+                        transition={{ delay: d, duration: 1.4, ease: 'easeOut', repeat: 1 }}
+                      />
+                    ))}
+                  </g>
+                );
+              })}
               {claimAnim && flashRoute !== null && state.owners[flashRoute] !== undefined && (
                 <ClaimFx key={flashRoute} g={GEOMS[flashRoute]} color={state.players[state.owners[flashRoute]].color} />
               )}

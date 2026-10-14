@@ -1,8 +1,15 @@
 import { AnimatePresence } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { music } from '../lib/music';
-import { setPref, usePref, type BotSpeed } from '../lib/prefs';
+import { setPref, usePref, type BotSpeed, type MapTheme } from '../lib/prefs';
+import { playSfx } from '../lib/sfx';
 import { Sheet } from './Tickets';
+
+const THEMES: [MapTheme, string][] = [
+  ['auto', 'Selon l’heure'],
+  ['day', 'Jour'],
+  ['dusk', 'Crépuscule'],
+];
 
 const SPEEDS: [BotSpeed, string][] = [
   ['slow', 'Lente'],
@@ -61,6 +68,8 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
   const introVoice = usePref('introVoice');
   const botSpeed = usePref('botSpeed');
   const colorBlind = usePref('colorBlind');
+  const sfx = usePref('sfx');
+  const mapTheme = usePref('mapTheme');
 
   return (
     <Sheet title="Réglages" subtitle="Enregistrés sur cet appareil." onClose={onClose}>
@@ -74,6 +83,16 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
               if (v) void music.start();
               else music.stop();
               setMusicOn(v);
+            }}
+          />
+        </Row>
+        <Row icon="🔔" title="Effets sonores" hint="Cartes, sifflet à la pose, carillon des billets réalisés.">
+          <Switch
+            on={sfx}
+            label="Effets sonores"
+            onChange={(v) => {
+              setPref('sfx', v);
+              if (v) playSfx('chime');
             }}
           />
         </Row>
@@ -93,6 +112,27 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
         <Row icon="🔊" title="Voix off de la présentation">
           <Switch on={introVoice} label="Voix off de la présentation" onChange={(v) => setPref('introVoice', v)} />
         </Row>
+        <div className="settings__row settings__row--block">
+          <span className="settings__icon" aria-hidden>
+            🌅
+          </span>
+          <span className="settings__text">
+            <b>Ambiance de la carte</b>
+            <small>Le crépuscule s’installe le soir en mode automatique.</small>
+          </span>
+          <fieldset className="segmented segmented--sm settings__speeds" aria-label="Ambiance de la carte">
+            {THEMES.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={mapTheme === value ? 'is-on' : ''}
+                onClick={() => setPref('mapTheme', value)}
+              >
+                {label}
+              </button>
+            ))}
+          </fieldset>
+        </div>
         <div className="settings__row settings__row--block">
           <span className="settings__icon" aria-hidden>
             🤖

@@ -2,6 +2,8 @@ import { animate, AnimatePresence, motion, useMotionValue, useTransform } from '
 import { useEffect, useMemo, useState } from 'react';
 import type { GameState, PlayerResult } from '../../shared/types';
 import { music } from '../lib/music';
+import { getPref } from '../lib/prefs';
+import { playSfx } from '../lib/sfx';
 import { PLAYER_FILL, PLAYER_LIGHT } from '../lib/theme';
 import { WagonIcon } from './TrainCard';
 
@@ -83,7 +85,8 @@ export function EndCinematic({ state, onDone }: { state: GameState; onDone: () =
     const t2 = setTimeout(
       () => {
         setPhase('winner');
-        music.fanfare();
+        if (music.playing) music.fanfare();
+        else if (getPref('sfx')) playSfx('fanfare');
       },
       2600 + podiumDuration * 1000,
     );

@@ -1,0 +1,66 @@
+.celebrate {
+  position: absolute;
+  z-index: 4;
+  top: 60px;
+  left: 50%;
+  translate: -50% 0;
+  width: min(92%, 360px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 10px;
+  border-radius: 18px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--green);
+  box-shadow:
+    0 0 0 4px rgba(47, 138, 76, 0.25),
+    var(--shadow);
+  pointer-events: none;
+}
+
+.celebrate__title {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.3rem;
+  color: var(--green);
+}
+
+.celebrate__title b {
+  color: var(--navy);
+}
+
+.celebrate__ticket {
+  position: relative;
+  width: 100%;
+}
+
+.celebrate__stamp {
+  position: absolute;
+  right: -8px;
+  top: -14px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  font-weight: 900;
+  font-size: 1.5rem;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.celebrate__who {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--pc);
+}
+
+.city-burst {
+  fill: none;
+  stroke: #2fbf5c;
+  stroke-width: 3;
+}

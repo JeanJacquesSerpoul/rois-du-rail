@@ -7,12 +7,14 @@ import { TICKET_BY_ID } from '../../shared/map';
 import { ROUTES, ROUTE_BY_ID } from '../../shared/map';
 import type { Action, CardColor, GameEvent, GameState } from '../../shared/types';
 import { api } from '../lib/api';
-import { BOT_DELAYS, usePref } from '../lib/prefs';
+import { BOT_DELAYS, getPref, usePref } from '../lib/prefs';
+import { playSfx } from '../lib/sfx';
 import { PLAYER_FILL } from '../lib/theme';
 import { AdvisorSheet } from './Advisor';
 import { Board, travelTime, type PlanOverlay } from './Board';
 import { EndScreen } from './EndScreen';
 import { SettingsButton } from './Settings';
+import { TicketCelebration } from './TicketCelebration';
 import { Coach } from './Tutorial';
 import { ClaimSheet, EventLog, HandView, Market, PlayersBar, TicketsSheet, Toasts } from './Panels';
 import { Sheet, TicketPicker } from './Tickets';
@@ -45,6 +47,11 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   // séquence spectaculaire quand la partie se termine sous nos yeux
   const [cinematic, setCinematic] = useState(false);
   const prevPhase = useRef<GameState['phase'] | null>(null);
+  const prevState = useRef<GameState | null>(null);
+  // billets réalisés à célébrer (joueurs humains uniquement), affichés un par un
+  const [celebrations, setCelebrations] = useState<{ seat: number; ticketId: number }[]>([]);
+  // rappel stable : le minuteur de la célébration ne repart pas à chaque rendu
+  const nextCelebration = useCallback(() => setCelebrations((c) => c.slice(1)), []);
   // chef de gare : conseil affiché dans sa fenêtre, puis gardé en surbrillance jusqu'au prochain coup
   const [advice, setAdvice] = useState<Advice | null>(null);
   const [hint, setHint] = useState<Advice | null>(null);
@@ -55,6 +62,34 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
     lastSeq.current = next.eventSeq;
     if (!initial && prevPhase.current !== 'finished' && next.phase === 'finished') setCinematic(true);
     prevPhase.current = next.phase;
+    const before = prevState.current;
+    prevState.current = next;
+
+    // billets humains qui viennent d'être reliés
+    const completed =
+      initial || !before
+        ? []
+        : next.players.flatMap((p, seat) =>
+            p.isBot
+              ? []
+              : p.tickets
+                  .filter(
+                    (tid) =>
+                      ticketDone(next, seat, tid) && before.players[seat].tickets.includes(tid) && !ticketDone(before, seat, tid),
+                  )
+                  .map((ticketId) => ({ seat, ticketId })),
+          );
+    if (completed.length) setCelebrations((c) => [...c, ...completed]);
+
+    // un seul effet sonore par mise à jour, le plus important
+    if (getPref('sfx') && fresh.length && next.phase !== 'finished') {
+      const kinds = new Set(fresh.map((e) => e.kind));
+      if (kinds.has('lastRound')) playSfx('bell');
+      else if (kinds.has('claimRoute')) playSfx('whistle');
+      else if (kinds.has('drawTickets') || kinds.has('keepTickets')) playSfx('tickets');
+      else if (kinds.has('drawFaceUp') || kinds.has('drawDeck')) playSfx('card');
+      if (completed.length) setTimeout(() => playSfx('chime'), 650);
+    }
     setState(next);
     setHint(null);
     setAdvice(null);
@@ -121,6 +156,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
       if (action.type === 'keepTickets') setPreview([]);
     } catch (e) {
       setError((e as Error).message);
+      if (getPref('sfx')) playSfx('error');
     } finally {
       setBusy(false);
     }
@@ -221,6 +257,9 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           claimAnim={claimAnim}
           focusRoute={selectedRoute ?? hint?.routeId ?? null}
           plans={plans}
+          burstCities={
+            celebrations[0] ? [TICKET_BY_ID[celebrations[0].ticketId].a, TICKET_BY_ID[celebrations[0].ticketId].b] : []
+          }
           claimable={claimable}
           flashRoute={flashRoute}
           onRouteClick={(rid) => setSelectedRoute(rid)}
@@ -294,6 +333,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
             </button>
           )}
         </div>
+        <TicketCelebration item={celebrations[0] ?? null} state={state} onDone={nextCelebration} />
         {viewer !== null && !mustPassDevice && (
           <Coach gameId={id} state={state} viewer={viewer} myTurn={myTurn} plansShown={showPlans} adviceOpened={adviceOpened} />
         )}

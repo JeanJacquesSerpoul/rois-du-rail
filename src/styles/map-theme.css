@@ -1,0 +1,58 @@
+/* thèmes de la carte : jour (par défaut) et crépuscule */
+
+.board {
+  --map-sea: #b9d3d3;
+  --map-wave: #7fa7ae;
+  --map-neighbor: #e2d6b8;
+  --map-neighbor-line: #a08d66;
+  --map-hatch: #a38f6a;
+  --map-land-1: #f7ecd2;
+  --map-land-2: #e9d6ad;
+  --map-coast: #7a5c2e;
+  --map-vignette: #3a2a10;
+  --map-vignette-opacity: 0.28;
+  --map-paper: 0.16;
+  --map-sea-label: #46707a;
+}
+
+.board[data-theme="dusk"] {
+  --map-sea: #5d6f93;
+  --map-wave: #c3cde8;
+  --map-neighbor: #c7ae86;
+  --map-neighbor-line: #7d6440;
+  --map-hatch: #6e5634;
+  --map-land-1: #f1d6a2;
+  --map-land-2: #d4a76a;
+  --map-coast: #5a3e1a;
+  --map-vignette: #1b1238;
+  --map-vignette-opacity: 0.55;
+  --map-paper: 0.26;
+  --map-sea-label: #dfe6f7;
+}
+
+.game__board:has(.board[data-theme="dusk"]) {
+  background: #5d6f93;
+}
+
+.map-sea {
+  fill: var(--map-sea);
+  transition: fill 1s;
+}
+
+.map-neighbor {
+  fill: var(--map-neighbor);
+  stroke: var(--map-neighbor-line);
+}
+
+.map-coast {
+  stroke: var(--map-coast);
+}
+
+.map-paper {
+  opacity: var(--map-paper);
+  mix-blend-mode: multiply;
+}
+
+.board .map-label--sea {
+  fill: var(--map-sea-label);
+}
