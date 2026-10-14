@@ -1,0 +1,94 @@
+/* prise de route */
+
+.claim__route {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  margin: 4px 0 12px;
+}
+
+.claim__slot {
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 900;
+  width: 42px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(40, 25, 5, 0.7);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.claim__meta {
+  text-align: center;
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+}
+
+.claim__meta b {
+  color: var(--red);
+}
+
+.claim__owner,
+.claim__blocked {
+  text-align: center;
+  font-weight: 800;
+  margin: 8px 0;
+}
+
+.claim__blocked {
+  color: #7a0d1d;
+}
+
+.claim__hint {
+  margin: 0 0 8px;
+  font-weight: 800;
+}
+
+.claim__options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pay-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fffaf0;
+  border: 2px solid #d9c79b;
+  font-weight: 800;
+  min-height: 52px;
+}
+
+.pay-option:hover:not(:disabled) {
+  border-color: var(--red);
+}
+
+.pay-option__part {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pay-option__go {
+  margin-left: auto;
+  color: var(--red);
+}
+
+.pay-dot {
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 900;
+  width: 26px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(0, 0, 0, 0.35);
+}
+
+.pay-dot--loco {
+  background: conic-gradient(from 200deg, #d4473f, #ec8b2e, #f1c534, #4c9a4a, #3877c4, #b25599, #d4473f);
+}

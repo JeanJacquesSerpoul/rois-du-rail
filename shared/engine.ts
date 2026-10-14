@@ -1,15 +1,5 @@
 import { CITY_BY_ID, ROUTES, ROUTE_BY_ID, TICKETS, TICKET_BY_ID } from './map';
-import type {
-  Action,
-  CardColor,
-  GameEvent,
-  GameState,
-  Hand,
-  PlayerConfig,
-  PlayerResult,
-  Route,
-  TrainColor,
-} from './types';
+import type { Action, CardColor, GameEvent, GameState, Hand, PlayerConfig, PlayerResult, Route, TrainColor } from './types';
 
 export const TRAIN_COLORS: TrainColor[] = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'black', 'white'];
 export const CARD_COLORS: CardColor[] = [...TRAIN_COLORS, 'loco'];
@@ -144,7 +134,10 @@ export function createGame(configs: PlayerConfig[], seed = Date.now()): GameStat
   for (const c of TRAIN_COLORS) for (let i = 0; i < 12; i++) s.deck.push(c);
   for (let i = 0; i < 14; i++) s.deck.push('loco');
   shuffle(s, s.deck);
-  s.ticketDeck = shuffle(s, TICKETS.map((t) => t.id));
+  s.ticketDeck = shuffle(
+    s,
+    TICKETS.map((t) => t.id),
+  );
   for (const p of s.players) {
     for (let i = 0; i < 4; i++) p.hand[drawFromDeck(s)!] += 1;
   }
@@ -414,7 +407,8 @@ export function applyAction(state: GameState, seat: number, action: Action): Gam
       if (!route) fail('Route inconnue.');
       const status = claimStatus(s, seat, route.id);
       if (status === 'owned') fail('Cette route est déjà prise.');
-      if (status === 'pair') fail(s.players.length < 4 ? 'Voie double fermée à moins de 4 joueurs.' : 'Vous possédez déjà la voie parallèle.');
+      if (status === 'pair')
+        fail(s.players.length < 4 ? 'Voie double fermée à moins de 4 joueurs.' : 'Vous possédez déjà la voie parallèle.');
       if (status === 'wagons') fail('Pas assez de wagons.');
       const pay = computePayment(p.hand, route, action.color);
       if (!pay) fail('Cartes insuffisantes pour cette route.');

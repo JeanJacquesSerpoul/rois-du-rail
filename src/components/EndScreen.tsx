@@ -78,9 +78,14 @@ export function EndScreen({ state, onClose, onHome, onNewGame, onReplay }: Props
                     {p.name} {p.isBot && '🤖'}
                   </div>
                   <div className="end__breakdown">
-                    <span>Routes <b>{r.routePoints}</b></span>
                     <span>
-                      Destinations <b className={r.ticketPoints < 0 ? 'neg' : ''}>{r.ticketPoints >= 0 ? `+${r.ticketPoints}` : r.ticketPoints}</b>
+                      Routes <b>{r.routePoints}</b>
+                    </span>
+                    <span>
+                      Destinations{' '}
+                      <b className={r.ticketPoints < 0 ? 'neg' : ''}>
+                        {r.ticketPoints >= 0 ? `+${r.ticketPoints}` : r.ticketPoints}
+                      </b>
                     </span>
                     <span>
                       Plus long trajet <b>{r.longest}</b>

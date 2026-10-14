@@ -1,0 +1,76 @@
+/* réglages */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 2px;
+  border-bottom: 1px dashed #e0d1ad;
+}
+
+.settings__row--block {
+  flex-wrap: wrap;
+}
+
+.settings__icon {
+  font-size: 1.3rem;
+  width: 28px;
+  text-align: center;
+}
+
+.settings__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings__text small {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.settings__speeds {
+  flex-basis: 100%;
+  justify-content: space-between;
+}
+
+.settings__speeds button {
+  flex: 1;
+}
+
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  background: #cbbd9a;
+  transition: background 0.2s;
+}
+
+.switch.is-on {
+  background: var(--green);
+}
+
+.switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s;
+}
+
+.switch.is-on .switch__knob {
+  transform: translateX(22px);
+}

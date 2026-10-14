@@ -1,7 +1,17 @@
 import { motion } from 'motion/react';
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pan-pinch';
-import { CITIES, CITY_BY_ID, FRANCE_PATH, MAP_HEIGHT, MAP_LABELS, MAP_WIDTH, NEIGHBOR_PATHS, ROUTES, project } from '../../shared/map';
+import {
+  CITIES,
+  CITY_BY_ID,
+  FRANCE_PATH,
+  MAP_HEIGHT,
+  MAP_LABELS,
+  MAP_WIDTH,
+  NEIGHBOR_PATHS,
+  ROUTES,
+  project,
+} from '../../shared/map';
 import { COLOR_NAMES, ROUTE_POINTS, routeName } from '../../shared/engine';
 import type { GameState, PlayerColor, Route } from '../../shared/types';
 import { usePref } from '../lib/prefs';
@@ -82,6 +92,7 @@ const AMBIGUOUS_PX = 7;
 /** Recentre et zoome sur une route si elle paraît trop petite à l'écran. */
 function FocusRoute({ routeId }: { routeId: number | null }) {
   const { zoomToElement, state } = useControls();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: on ne recentre que lorsque la route change, pas à chaque zoom
   useEffect(() => {
     if (routeId === null) return;
     const el = document.getElementById(`route-${routeId}`);
@@ -91,7 +102,6 @@ function FocusRoute({ routeId }: { routeId: number | null }) {
     if (size >= 140) return; // déjà bien visible
     const target = Math.min(5, Math.max(state.scale, (state.scale * 160) / Math.max(size, 1)));
     void zoomToElement(el, target, 450);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeId]);
   return null;
 }
@@ -157,7 +167,11 @@ function ClaimFx({ g, color }: { g: RouteGeom; color: PlayerColor }) {
       <motion.g
         initial={{ x: g.x1, y: g.y1, opacity: 0 }}
         animate={{ x: g.x2, y: g.y2, opacity: [0, 1, 1, 0] }}
-        transition={{ x: { duration: T, ease: 'linear' }, y: { duration: T, ease: 'linear' }, opacity: { duration: T + 0.3, times: [0, 0.1, 0.85, 1] } }}
+        transition={{
+          x: { duration: T, ease: 'linear' },
+          y: { duration: T, ease: 'linear' },
+          opacity: { duration: T + 0.3, times: [0, 0.1, 0.85, 1] },
+        }}
       >
         <g transform={`rotate(${angle})`}>
           <ellipse cx="0" cy="3" rx="15" ry="6" fill="#000" opacity=".25" />
@@ -243,9 +257,131 @@ const Background = memo(function Background() {
         <path d="M0 -42 L7 0 L0 42 L-7 0Z" fill="#6b5430" fillOpacity=".75" />
         <path d="M-42 0 L0 7 L42 0 L0 -7Z" fill="#6b5430" fillOpacity=".45" />
         <path d="M0 -42 L7 0 L0 0Z" fill="#a8122a" />
-        <text y="-47" textAnchor="middle" className="compass__n">N</text>
+        <text y="-47" textAnchor="middle" className="compass__n">
+          N
+        </text>
       </g>
       <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#vignette)" pointerEvents="none" />
+    </g>
+  );
+});
+
+interface RouteViewProps {
+  g: RouteGeom;
+  ownerColor: PlayerColor | null;
+  selected: boolean;
+  canClaim: boolean;
+  flash: boolean;
+  hint: boolean;
+  claimAnim: boolean;
+  colorBlind: boolean;
+  onActivate: (id: number) => void;
+}
+
+/**
+ * Une route de la carte. Mémoïsée : seules les routes dont l'état change sont
+ * redessinées à chaque coup (99 routes, près de 280 wagons).
+ */
+const RouteView = memo(function RouteView({
+  g,
+  ownerColor,
+  selected,
+  canClaim,
+  flash,
+  hint,
+  claimAnim,
+  colorBlind,
+  onActivate,
+}: RouteViewProps) {
+  const { route } = g;
+  const owned = ownerColor !== null;
+  const focusable = canClaim || hint;
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: le rôle « button » est posé quand la route est jouable au clavier
+    <g
+      id={`route-${route.id}`}
+      // routes jouables (et route conseillée) atteignables au clavier
+      tabIndex={focusable ? 0 : undefined}
+      role={focusable ? 'button' : undefined}
+      aria-label={
+        focusable
+          ? `${routeName(route)}, ${route.length} wagon${route.length > 1 ? 's' : ''}, ${COLOR_NAMES[route.color]}`
+          : undefined
+      }
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onActivate(route.id);
+        }
+      }}
+      className={`route ${owned ? 'route--owned' : ''} ${selected ? 'route--selected' : ''} ${canClaim ? 'route--claimable' : ''} ${flash ? 'route--flash' : ''} ${hint ? 'route--hint' : ''}`}
+    >
+      <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__hit" />
+      {hint && <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__hint" />}
+      {(selected || canClaim) && <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__glow" />}
+      {g.wagons.map((w, i) => (
+        <g key={i} transform={`translate(${w.x} ${w.y}) rotate(${w.angle})`}>
+          {ownerColor ? (
+            <motion.g
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{
+                // avec l'animation de pose, chaque wagon apparaît au passage de la locomotive
+                delay: claimAnim && flash ? (travelTime(route.length) * (i + 0.5)) / route.length : i * 0.08,
+                type: 'spring',
+                stiffness: 320,
+                damping: 18,
+              }}
+            >
+              <rect
+                x={-w.w / 2 - 1}
+                y={-WAGON_H / 2 - 1.5}
+                width={w.w + 2}
+                height={WAGON_H + 3}
+                rx="2.6"
+                fill={PLAYER_FILL[ownerColor]}
+                stroke="#1b1206"
+                strokeWidth="1"
+              />
+              <rect
+                x={-w.w / 2 + 2}
+                y={-WAGON_H / 2 + 0.8}
+                width={w.w - 4}
+                height={2.4}
+                rx="1"
+                fill={PLAYER_LIGHT[ownerColor]}
+                opacity=".8"
+              />
+              <circle cx={-w.w / 2 + 3.5} cy={WAGON_H / 2 + 1.5} r="1.7" fill="#1b1206" />
+              <circle cx={w.w / 2 - 3.5} cy={WAGON_H / 2 + 1.5} r="1.7" fill="#1b1206" />
+            </motion.g>
+          ) : (
+            <rect
+              x={-w.w / 2}
+              y={-WAGON_H / 2}
+              width={w.w}
+              height={WAGON_H}
+              rx="2"
+              fill={ROUTE_FILL[route.color]}
+              stroke="rgba(40,25,5,.75)"
+              strokeWidth="1"
+              className="route__slot"
+            />
+          )}
+          {!owned && colorBlind && route.color !== 'gray' && (
+            // le symbole reste droit quel que soit le sens de la route
+            <text
+              className="route__symbol"
+              transform={`rotate(${-w.angle})`}
+              fill={CARD_INK[route.color]}
+              textAnchor="middle"
+              dy="2.6"
+            >
+              {COLOR_SYMBOL[route.color]}
+            </text>
+          )}
+        </g>
+      ))}
     </g>
   );
 });
@@ -254,9 +390,15 @@ function ZoomControls() {
   const { zoomIn, zoomOut, resetTransform } = useControls();
   return (
     <div className="zoom-controls">
-      <button type="button" onClick={() => zoomIn()} aria-label="Zoomer">+</button>
-      <button type="button" onClick={() => zoomOut()} aria-label="Dézoomer">−</button>
-      <button type="button" onClick={() => resetTransform()} aria-label="Recentrer">⤢</button>
+      <button type="button" onClick={() => zoomIn()} aria-label="Zoomer">
+        +
+      </button>
+      <button type="button" onClick={() => zoomOut()} aria-label="Dézoomer">
+        −
+      </button>
+      <button type="button" onClick={() => resetTransform()} aria-label="Recentrer">
+        ⤢
+      </button>
     </div>
   );
 }
@@ -305,6 +447,11 @@ export function Board({
     const fitHeight = (width * MAP_HEIGHT) / MAP_WIDTH;
     setFillScale(Math.min(2.2, Math.max(1, height / fitHeight)));
   }, []);
+  // rappel stable : les routes mémoïsées ne se redessinent pas quand le parent change de fonction
+  const routeClick = useRef(onRouteClick);
+  routeClick.current = onRouteClick;
+  const activate = useCallback((id: number) => routeClick.current(id), []);
+
   const isTap = (e: React.MouseEvent) => {
     const d = down.current;
     return !d || Math.hypot(e.clientX - d.x, e.clientY - d.y) < 10;
@@ -343,148 +490,89 @@ export function Board({
       }}
     >
       {fillScale !== null && (
-      <TransformWrapper
-        initialScale={fillScale}
-        minScale={1}
-        maxScale={6}
-        centerOnInit
-        doubleClick={{ mode: 'zoomIn', step: 0.7 }}
-        wheel={{ step: 0.15 }}
-      >
-        <ZoomControls />
-        <FocusRoute routeId={focusRoute} />
-        <TransformComponent wrapperClass="board__wrapper" contentClass="board__content">
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
-            className="board__svg"
-            preserveAspectRatio="xMidYMid meet"
-            onClick={handleTap}
-          >
-            <Background />
+        <TransformWrapper
+          initialScale={fillScale}
+          minScale={1}
+          maxScale={6}
+          centerOnInit
+          doubleClick={{ mode: 'zoomIn', step: 0.7 }}
+          wheel={{ step: 0.15 }}
+        >
+          <ZoomControls />
+          <FocusRoute routeId={focusRoute} />
+          <TransformComponent wrapperClass="board__wrapper" contentClass="board__content">
+            {/* biome-ignore lint/a11y/noSvgWithoutTitle lint/a11y/useKeyWithClickEvents: la carte se pilote aussi au clavier via les routes focalisables */}
+            <svg
+              ref={svgRef}
+              viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+              className="board__svg"
+              preserveAspectRatio="xMidYMid meet"
+              onClick={handleTap}
+            >
+              <Background />
 
-            {/* routes */}
-            {GEOMS.map((g) => {
-              const owner = state.owners[g.route.id];
-              const owned = owner !== undefined;
-              const pColor = owned ? state.players[owner].color : null;
-              const selected = selectedRoute === g.route.id;
-              const canClaim = claimable.has(g.route.id);
-              return (
-                <g
-                  key={g.route.id}
-                  id={`route-${g.route.id}`}
-                  // routes jouables (et route conseillée) atteignables au clavier
-                  tabIndex={canClaim || hintRoute === g.route.id ? 0 : undefined}
-                  role={canClaim || hintRoute === g.route.id ? 'button' : undefined}
-                  aria-label={
-                    canClaim || hintRoute === g.route.id
-                      ? `${routeName(g.route)}, ${g.route.length} wagon${g.route.length > 1 ? 's' : ''}, ${COLOR_NAMES[g.route.color]}`
-                      : undefined
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onRouteClick(g.route.id);
-                    }
-                  }}
-                  className={`route ${owned ? 'route--owned' : ''} ${selected ? 'route--selected' : ''} ${canClaim ? 'route--claimable' : ''} ${flashRoute === g.route.id ? 'route--flash' : ''} ${hintRoute === g.route.id ? 'route--hint' : ''}`}
-                >
-                  <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__hit" />
-                  {hintRoute === g.route.id && <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__hint" />}
-                  {(selected || canClaim) && (
-                    <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__glow" />
-                  )}
-                  {g.wagons.map((w, i) => (
-                    <g key={i} transform={`translate(${w.x} ${w.y}) rotate(${w.angle})`}>
-                      {owned && pColor ? (
-                        <motion.g
-                          initial={{ scale: 0, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{
-                            // avec l'animation de pose, chaque wagon apparaît au passage de la locomotive
-                            delay:
-                              claimAnim && flashRoute === g.route.id
-                                ? (travelTime(g.route.length) * (i + 0.5)) / g.route.length
-                                : i * 0.08,
-                            type: 'spring',
-                            stiffness: 320,
-                            damping: 18,
-                          }}
-                        >
-                          <rect x={-w.w / 2 - 1} y={-WAGON_H / 2 - 1.5} width={w.w + 2} height={WAGON_H + 3} rx="2.6" fill={PLAYER_FILL[pColor]} stroke="#1b1206" strokeWidth="1" />
-                          <rect x={-w.w / 2 + 2} y={-WAGON_H / 2 + 0.8} width={w.w - 4} height={2.4} rx="1" fill={PLAYER_LIGHT[pColor]} opacity=".8" />
-                          <circle cx={-w.w / 2 + 3.5} cy={WAGON_H / 2 + 1.5} r="1.7" fill="#1b1206" />
-                          <circle cx={w.w / 2 - 3.5} cy={WAGON_H / 2 + 1.5} r="1.7" fill="#1b1206" />
-                        </motion.g>
-                      ) : (
-                        <rect
-                          x={-w.w / 2}
-                          y={-WAGON_H / 2}
-                          width={w.w}
-                          height={WAGON_H}
-                          rx="2"
-                          fill={ROUTE_FILL[g.route.color]}
-                          stroke="rgba(40,25,5,.75)"
-                          strokeWidth="1"
-                          className="route__slot"
-                        />
-                      )}
-                      {!owned && colorBlind && g.route.color !== 'gray' && (
-                        // le symbole reste droit quel que soit le sens de la route
-                        <text className="route__symbol" transform={`rotate(${-w.angle})`} fill={CARD_INK[g.route.color]} textAnchor="middle" dy="2.6">
-                          {COLOR_SYMBOL[g.route.color]}
-                        </text>
-                      )}
-                    </g>
-                  ))}
+              {/* routes */}
+              {GEOMS.map((g) => {
+                const owner = state.owners[g.route.id];
+                return (
+                  <RouteView
+                    key={g.route.id}
+                    g={g}
+                    ownerColor={owner !== undefined ? state.players[owner].color : null}
+                    selected={selectedRoute === g.route.id}
+                    canClaim={claimable.has(g.route.id)}
+                    flash={flashRoute === g.route.id}
+                    hint={hintRoute === g.route.id}
+                    claimAnim={claimAnim}
+                    colorBlind={colorBlind}
+                    onActivate={activate}
+                  />
+                );
+              })}
+
+              {/* calque des trajets de destinations */}
+              {plans.length > 0 && (
+                <g className="plans" pointerEvents="none">
+                  {plans.map((p) => {
+                    const a = CITY_BY_ID[p.a];
+                    const b = CITY_BY_ID[p.b];
+                    return (
+                      <g key={p.id} className={`plan plan--${p.state}`}>
+                        {p.state === 'blocked' && <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="plan__direct" />}
+                        {p.routeIds.map((rid) => {
+                          const g = GEOMS[rid];
+                          return <line key={rid} x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="plan__route" />;
+                        })}
+                        <circle cx={a.x} cy={a.y} r={CITY_R + 6} className="plan__city" />
+                        <circle cx={b.x} cy={b.y} r={CITY_R + 6} className="plan__city" />
+                      </g>
+                    );
+                  })}
                 </g>
-              );
-            })}
+              )}
 
-            {/* calque des trajets de destinations */}
-            {plans.length > 0 && (
-              <g className="plans" pointerEvents="none">
-                {plans.map((p) => {
-                  const a = CITY_BY_ID[p.a];
-                  const b = CITY_BY_ID[p.b];
-                  return (
-                    <g key={p.id} className={`plan plan--${p.state}`}>
-                      {p.state === 'blocked' && <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="plan__direct" />}
-                      {p.routeIds.map((rid) => {
-                        const g = GEOMS[rid];
-                        return <line key={rid} x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="plan__route" />;
-                      })}
-                      <circle cx={a.x} cy={a.y} r={CITY_R + 6} className="plan__city" />
-                      <circle cx={b.x} cy={b.y} r={CITY_R + 6} className="plan__city" />
-                    </g>
-                  );
-                })}
-              </g>
-            )}
+              {/* villes */}
+              {CITIES.map((c) => {
+                const [dx, dy, anchor] = LABEL_OFFSET[c.label];
+                const hl = highlightCities.includes(c.id);
+                return (
+                  <g key={c.id} className={`city ${hl ? 'city--hl' : ''} ${c.foreign ? 'city--foreign' : ''}`}>
+                    {hl && <circle cx={c.x} cy={c.y} r={CITY_R + 7} className="city__pulse" />}
+                    <circle cx={c.x} cy={c.y} r={CITY_R} className="city__dot" />
+                    <circle cx={c.x} cy={c.y} r={CITY_R - 3.5} className="city__core" />
+                    <text x={c.x + dx} y={c.y + dy} textAnchor={anchor} className="city__label">
+                      {c.name}
+                    </text>
+                  </g>
+                );
+              })}
 
-            {/* villes */}
-            {CITIES.map((c) => {
-              const [dx, dy, anchor] = LABEL_OFFSET[c.label];
-              const hl = highlightCities.includes(c.id);
-              return (
-                <g key={c.id} className={`city ${hl ? 'city--hl' : ''} ${c.foreign ? 'city--foreign' : ''}`}>
-                  {hl && <circle cx={c.x} cy={c.y} r={CITY_R + 7} className="city__pulse" />}
-                  <circle cx={c.x} cy={c.y} r={CITY_R} className="city__dot" />
-                  <circle cx={c.x} cy={c.y} r={CITY_R - 3.5} className="city__core" />
-                  <text x={c.x + dx} y={c.y + dy} textAnchor={anchor} className="city__label">
-                    {c.name}
-                  </text>
-                </g>
-              );
-            })}
-
-            {claimAnim && flashRoute !== null && state.owners[flashRoute] !== undefined && (
-              <ClaimFx key={flashRoute} g={GEOMS[flashRoute]} color={state.players[state.owners[flashRoute]].color} />
-            )}
-          </svg>
-        </TransformComponent>
-      </TransformWrapper>
+              {claimAnim && flashRoute !== null && state.owners[flashRoute] !== undefined && (
+                <ClaimFx key={flashRoute} g={GEOMS[flashRoute]} color={state.players[state.owners[flashRoute]].color} />
+              )}
+            </svg>
+          </TransformComponent>
+        </TransformWrapper>
       )}
       {chooser && (
         <div className="route-chooser" style={{ left: chooser.x, top: chooser.y }} role="menu" aria-label="Choisir une route">

@@ -1,5 +1,16 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { CARD_COLORS, COLOR_NAMES, LONGEST_BONUS, ROUTE_POINTS, longestPath, claimStatus, handSize, paymentOptions, routeName, ticketDone } from '../../shared/engine';
+import {
+  CARD_COLORS,
+  COLOR_NAMES,
+  LONGEST_BONUS,
+  ROUTE_POINTS,
+  longestPath,
+  claimStatus,
+  handSize,
+  paymentOptions,
+  routeName,
+  ticketDone,
+} from '../../shared/engine';
 import { BOT_LEVEL_NAMES } from '../../shared/bot';
 import { CITY_BY_ID, ROUTE_BY_ID, TICKET_BY_ID } from '../../shared/map';
 import type { CardColor, GameEvent, GameState } from '../../shared/types';
@@ -134,7 +145,13 @@ export function HandView({
       {colors.length === 0 && <span className="hand__empty">Aucune carte en main</span>}
       <AnimatePresence>
         {colors.map((c) => (
-          <motion.div key={c} layout initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.4, opacity: 0 }}>
+          <motion.div
+            key={c}
+            layout
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.4, opacity: 0 }}
+          >
             <TrainCard
               color={c}
               count={hand[c]}
@@ -215,7 +232,8 @@ export function ClaimSheet({ state, routeId, seat, busy, onClaim, onClose }: Cla
                     <span className="pay-option__part">
                       <span className="pay-dot" style={{ background: CARD_FILL[p.color], color: CARD_INK[p.color] }}>
                         {colorBlind ? COLOR_SYMBOL[p.color] : null}
-                      </span> ×{p.colored}
+                      </span>{' '}
+                      ×{p.colored}
                     </span>
                   )}
                   {p.locos > 0 && (
@@ -290,7 +308,11 @@ export function TicketsSheet({
   const tickets = state.players[seat].tickets;
   const done = tickets.filter((id) => ticketDone(state, seat, id)).length;
   return (
-    <Sheet title="Vos destinations" subtitle={`${done} / ${tickets.length} réalisées · touchez un billet pour le voir sur la carte`} onClose={onClose}>
+    <Sheet
+      title="Vos destinations"
+      subtitle={`${done} / ${tickets.length} réalisées · touchez un billet pour le voir sur la carte`}
+      onClose={onClose}
+    >
       <ScoreSummary state={state} seat={seat} />
       <div className="ticket-list">
         {tickets.map((id) => (

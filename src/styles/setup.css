@@ -1,0 +1,107 @@
+/* ------------------------------------------------------------------ préparation */
+
+.setup {
+  min-height: 100%;
+  background: var(--paper);
+  background-image: radial-gradient(ellipse at top, #fffaf0, transparent 70%);
+}
+
+.setup__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(12px + var(--safe-t)) 16px 12px;
+  background: var(--navy);
+  color: var(--cream);
+}
+
+.setup__head h1 {
+  font-family: var(--display);
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.setup__body {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 20px 16px calc(30px + var(--safe-b));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.setup__count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.setup__players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.setup-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #fffaf0;
+  border-radius: var(--radius);
+  border: 2px solid var(--pc);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--pc) 60%, black);
+  overflow: hidden;
+  flex-wrap: wrap;
+}
+
+.setup-player__color {
+  width: 52px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--pc);
+  padding: 4px 6px;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+}
+
+.setup-player__name {
+  flex: 1;
+  min-width: 110px;
+  border: 0;
+  border-bottom: 2px dashed #cdb98d;
+  background: transparent;
+  padding: 8px 4px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
+.setup-player__name:focus {
+  outline: none;
+  border-bottom-color: var(--pc);
+}
+
+.setup-player__level {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e0d1ad;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.setup__note {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}

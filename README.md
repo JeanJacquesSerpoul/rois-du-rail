@@ -28,7 +28,7 @@ Production : `npm run build` puis `npm start` (sert l'appli et l'API sur le port
 
 GitHub Pages n'héberge que des fichiers statiques : la démo en ligne est construite avec `VITE_OFFLINE=1`
 (`npm run build:pages`). Le moteur de jeu et l'IA tournent alors dans le navigateur et les parties sont
-gardées dans le `localStorage`. La version complète (`npm run dev` / `npm start`) utilise le serveur et SQLite.
+gardées dans le `localStorage`. Un service worker met le jeu en cache : une fois ouvert, il s'installe et fonctionne sans réseau. La version complète (`npm run dev` / `npm start`) utilise le serveur et SQLite.
 
 ## Scripts
 
@@ -38,6 +38,9 @@ gardées dans le `localStorage`. La version complète (`npm run dev` / `npm star
 | `npm test` | tests du moteur (dont des parties complètes simulées entre IA) |
 | `npm run typecheck` | vérification TypeScript |
 | `npm run build:pages` | build statique hors ligne pour GitHub Pages |
+| `npm run test:e2e` | tests de bout en bout Playwright (mobile et ordinateur) |
+| `npm run lint` | lint et vérification du formatage (Biome) |
+| `npm run format` | formate le code (Biome) |
 
 ## Structure
 

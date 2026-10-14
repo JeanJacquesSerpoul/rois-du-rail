@@ -56,7 +56,7 @@ export function insertGame(state: GameState): number {
   const res = db.prepare('INSERT INTO games (status, state_json) VALUES (?, ?)').run(state.phase, JSON.stringify(state));
   const id = Number(res.lastInsertRowid);
   const ins = db.prepare('INSERT INTO game_players (game_id, seat, name, is_bot, color) VALUES (?, ?, ?, ?, ?)');
-  state.players.forEach((p, seat) => ins.run(id, seat, p.name, p.isBot ? 1 : 0, p.color));
+  for (const [seat, p] of state.players.entries()) ins.run(id, seat, p.name, p.isBot ? 1 : 0, p.color);
   return id;
 }
 
@@ -92,9 +92,7 @@ export function listGames() {
   const games = db
     .prepare('SELECT id, status, created_at, updated_at FROM games ORDER BY updated_at DESC LIMIT 30')
     .all() as Omit<GameRow, 'state_json'>[];
-  const players = db.prepare(
-    'SELECT seat, name, is_bot, color, score, rank FROM game_players WHERE game_id = ? ORDER BY seat',
-  );
+  const players = db.prepare('SELECT seat, name, is_bot, color, score, rank FROM game_players WHERE game_id = ? ORDER BY seat');
   return games.map((g) => ({ ...g, players: players.all(g.id) }));
 }
 

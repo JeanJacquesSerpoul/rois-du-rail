@@ -69,6 +69,7 @@ export function Home({
       .listGames()
       .then(setGames)
       .catch((e) => setError(e.message));
+  // biome-ignore lint/correctness/useExhaustiveDependencies: chargement unique à l'ouverture de l'accueil
   useEffect(() => {
     refresh();
   }, []);
@@ -86,7 +87,12 @@ export function Home({
         <motion.p className="home__kicker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           Compagnie des chemins de fer de France
         </motion.p>
-        <motion.h1 className="home__title" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}>
+        <motion.h1
+          className="home__title"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1 }}
+        >
           Rois <span>du</span> Rail
         </motion.h1>
         <motion.p className="home__tagline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
@@ -133,7 +139,10 @@ export function Home({
             className="btn"
             onClick={() => {
               setSheet('stats');
-              api.stats().then(setLeaders).catch((e) => setError(e.message));
+              api
+                .stats()
+                .then(setLeaders)
+                .catch((e) => setError(e.message));
             }}
           >
             🏆 Classement
@@ -143,8 +152,8 @@ export function Home({
         {error && <p className="home__error">Serveur injoignable : {error}</p>}
         {OFFLINE && (
           <p className="home__note">
-            Version de démonstration : les parties sont enregistrées dans ce navigateur. La version complète utilise un
-            serveur avec base SQLite.
+            Version de démonstration : les parties sont enregistrées dans ce navigateur. La version complète utilise un serveur
+            avec base SQLite.
           </p>
         )}
 
@@ -205,14 +214,19 @@ export function Home({
 }
 
 function GameRow({ game, onOpen, onDelete }: { game: GameSummary; onOpen: (id: number) => void; onDelete: () => void }) {
-  const date = new Date(game.updated_at.replace(' ', 'T') + 'Z');
+  const date = new Date(`${game.updated_at.replace(' ', 'T')}Z`);
   const winner = game.players.find((p) => p.rank === 1);
   return (
     <li className="game-row">
       <button type="button" className="game-row__main" onClick={() => onOpen(game.id)}>
         <span className="game-row__players">
           {game.players.map((p) => (
-            <span key={p.seat} className="game-row__dot" style={{ background: PLAYER_FILL[p.color as PlayerColor] }} title={p.name}>
+            <span
+              key={p.seat}
+              className="game-row__dot"
+              style={{ background: PLAYER_FILL[p.color as PlayerColor] }}
+              title={p.name}
+            >
               {p.is_bot ? '🤖' : p.name.slice(0, 1).toUpperCase()}
             </span>
           ))}
@@ -226,12 +240,7 @@ function GameRow({ game, onOpen, onDelete }: { game: GameSummary; onOpen: (id: n
         </span>
         <span className="game-row__go">{game.status === 'finished' ? 'Voir' : 'Reprendre'} ›</span>
       </button>
-      <button
-        type="button"
-        className="icon-btn"
-        aria-label="Supprimer la partie"
-        onClick={onDelete}
-      >
+      <button type="button" className="icon-btn" aria-label="Supprimer la partie" onClick={onDelete}>
         🗑
       </button>
     </li>
@@ -347,16 +356,21 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
                   </button>
                 </div>
                 {p.isBot && (
-                  <div className="setup-player__level" role="group" aria-label={`Niveau de ${p.name}`}>
+                  <fieldset className="setup-player__level" aria-label={`Niveau de ${p.name}`}>
                     <span>Niveau</span>
                     <div className="segmented segmented--sm">
                       {BOT_LEVELS.map((l) => (
-                        <button key={l} type="button" className={(p.level ?? 'normal') === l ? 'is-on' : ''} onClick={() => update(i, { level: l })}>
+                        <button
+                          key={l}
+                          type="button"
+                          className={(p.level ?? 'normal') === l ? 'is-on' : ''}
+                          onClick={() => update(i, { level: l })}
+                        >
                           {LEVEL_ICONS[l]} {BOT_LEVEL_NAMES[l]}
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </fieldset>
                 )}
               </motion.li>
             ))}
@@ -384,8 +398,8 @@ function Rules({ onClose }: { onClose: () => void }) {
         </p>
         <h3>1. Piocher des cartes Wagon</h3>
         <p>
-          Prenez 2 cartes, visibles ou dans la pioche. Une <b>locomotive</b> visible compte pour les deux cartes ; elle ne peut pas
-          être prise en seconde carte. Trois locomotives visibles ? Les 5 cartes sont remplacées.
+          Prenez 2 cartes, visibles ou dans la pioche. Une <b>locomotive</b> visible compte pour les deux cartes ; elle ne peut
+          pas être prise en seconde carte. Trois locomotives visibles ? Les 5 cartes sont remplacées.
         </p>
         <div className="rules__cards">
           <TrainCard color="red" size="sm" />
@@ -394,8 +408,8 @@ function Rules({ onClose }: { onClose: () => void }) {
         </div>
         <h3>2. Prendre une route</h3>
         <p>
-          Défaussez autant de cartes de la couleur de la route que sa longueur. Les routes <b>grises</b> acceptent n'importe quelle
-          couleur (une seule à la fois). Les locomotives remplacent n'importe quelle couleur.
+          Défaussez autant de cartes de la couleur de la route que sa longueur. Les routes <b>grises</b> acceptent n'importe
+          quelle couleur (une seule à la fois). Les locomotives remplacent n'importe quelle couleur.
         </p>
         <table className="rules__table">
           <tbody>
@@ -415,13 +429,13 @@ function Rules({ onClose }: { onClose: () => void }) {
         </table>
         <h3>3. Piocher des destinations</h3>
         <p>
-          Tirez 3 billets et gardez-en au moins 1. En fin de partie, un billet réalisé (villes reliées par vos routes) rapporte ses
-          points, sinon il les fait perdre.
+          Tirez 3 billets et gardez-en au moins 1. En fin de partie, un billet réalisé (villes reliées par vos routes) rapporte
+          ses points, sinon il les fait perdre.
         </p>
         <h3>Fin de partie</h3>
         <p>
-          Quand un joueur n'a plus que 2 wagons ou moins, chacun joue un dernier tour. Le plus long trajet continu rapporte un bonus
-          de <b>{LONGEST_BONUS} points</b>.
+          Quand un joueur n'a plus que 2 wagons ou moins, chacun joue un dernier tour. Le plus long trajet continu rapporte un
+          bonus de <b>{LONGEST_BONUS} points</b>.
         </p>
       </div>
     </Sheet>

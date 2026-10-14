@@ -1,0 +1,169 @@
+/* ------------------------------------------------------------------ fin de partie */
+
+.end-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(8, 12, 22, 0.7);
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+  padding: calc(20px + var(--safe-t)) 12px calc(20px + var(--safe-b));
+}
+
+.end {
+  color: var(--ink);
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto;
+  background: var(--paper);
+  border-radius: 24px;
+  padding: 24px 16px 18px;
+  border: 3px solid var(--brass);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.end__trophy {
+  font-size: 3.4rem;
+  margin-top: -6px;
+  animation: puff 1.6s infinite;
+}
+
+.end__title {
+  font-family: var(--display);
+  font-size: 1.6rem;
+  margin: 6px 0 2px;
+  color: var(--navy);
+}
+
+.end__subtitle {
+  margin: 0 0 16px;
+  font-weight: 800;
+  color: var(--red);
+}
+
+.end__table {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.end__row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #fffaf0;
+  border-radius: 14px;
+  padding: 10px;
+  border-left: 6px solid var(--pc);
+  box-shadow: 0 2px 0 #e0d1ad;
+}
+
+.end__rank {
+  font-size: 1.6rem;
+  width: 36px;
+  text-align: center;
+  font-weight: 800;
+}
+
+.end__player {
+  flex: 1;
+  min-width: 0;
+}
+
+.end__name {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.end__breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin: 2px 0 8px;
+}
+
+.end__breakdown b {
+  color: var(--ink);
+}
+
+.end__breakdown b.neg {
+  color: #a3112a;
+}
+
+.end__breakdown em {
+  color: var(--red);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.end__tickets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.end__tickets .ticket {
+  padding: 4px 10px 4px 4px;
+}
+
+.end__tickets .ticket__map {
+  width: 34px;
+  height: 38px;
+}
+
+.end__tickets .ticket__cities {
+  font-size: 0.85rem;
+}
+
+.end__tickets .ticket__points {
+  min-width: 32px;
+  height: 32px;
+  font-size: 0.8rem;
+}
+
+.end__tickets .ticket__stamp {
+  right: 46px;
+  font-size: 0.6rem;
+}
+
+.end__total {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.8rem;
+  color: var(--navy);
+}
+
+.end__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti span {
+  position: absolute;
+  top: -20px;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  animation: fall linear infinite;
+}
+
+@keyframes fall {
+  to {
+    top: 110%;
+    rotate: 720deg;
+  }
+}

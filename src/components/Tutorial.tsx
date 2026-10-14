@@ -123,38 +123,43 @@ export function Coach(ctx: CoachContext & { gameId: number }) {
   return (
     // une bulle par étape (clé), sans animation de sortie : rien ne s'empile pendant les transitions
     <motion.div
-        key={saved.step}
-        className={`coach ${collapsed ? 'is-collapsed' : ''}`}
-        initial={{ opacity: 0, y: -12, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        role="status"
-        aria-live="polite"
+      key={saved.step}
+      className={`coach ${collapsed ? 'is-collapsed' : ''}`}
+      initial={{ opacity: 0, y: -12, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      role="status"
+      aria-live="polite"
+    >
+      <button
+        type="button"
+        className="coach__avatar"
+        onClick={() => setCollapsed((v) => !v)}
+        aria-label={collapsed ? 'Afficher le conseil' : 'Réduire le conseil'}
       >
-        <button type="button" className="coach__avatar" onClick={() => setCollapsed((v) => !v)} aria-label={collapsed ? 'Afficher le conseil' : 'Réduire le conseil'}>
-          🧑‍✈️
-        </button>
-        {!collapsed && (
-          <div className="coach__body">
-            <div className="coach__head">
-              <b>{step.title}</b>
-              <span>
-                Étape {saved.step + 1}/{STEPS.length}
-              </span>
-            </div>
-            <p>{step.text}</p>
-            <div className="coach__actions">
-              {step.done ? (
-                <button type="button" className="coach__link" onClick={finish}>
-                  Quitter la partie guidée
-                </button>
-              ) : (
-                <button type="button" className="btn btn--primary coach__done" onClick={finish}>
-                  Terminer la partie guidée
-                </button>
-              )}
-            </div>
+        🧑‍✈️
+      </button>
+      {!collapsed && (
+        <div className="coach__body">
+          <div className="coach__head">
+            <b>{step.title}</b>
+            <span>
+              Étape {saved.step + 1}/{STEPS.length}
+            </span>
           </div>
-        )}
+          <p>{step.text}</p>
+          <div className="coach__actions">
+            {step.done ? (
+              <button type="button" className="coach__link" onClick={finish}>
+                Quitter la partie guidée
+              </button>
+            ) : (
+              <button type="button" className="btn btn--primary coach__done" onClick={finish}>
+                Terminer la partie guidée
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

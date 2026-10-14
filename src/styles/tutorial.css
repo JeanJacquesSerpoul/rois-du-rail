@@ -1,0 +1,86 @@
+/* partie guidée */
+
+/* au-dessus des fenêtres (choix des billets…) pour rester visible pendant toute la partie guidée */
+.coach {
+  position: fixed;
+  z-index: 35;
+  top: calc(62px + var(--safe-t));
+  left: 10px;
+  right: 10px;
+  max-width: 460px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--brass);
+  box-shadow: var(--shadow);
+}
+
+.game:has(.coach:not(.is-collapsed)) .toasts {
+  top: 200px;
+}
+
+.coach.is-collapsed {
+  right: auto;
+  padding: 6px;
+  border-radius: 50%;
+}
+
+.coach__avatar {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  border-radius: 50%;
+  background: var(--cream);
+  border: 2px solid var(--brass);
+}
+
+.coach__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.coach__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--display);
+  color: var(--red);
+}
+
+.coach__head span {
+  font-family: var(--ui);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.coach__body p {
+  margin: 4px 0 6px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.coach__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.coach__link {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+  text-decoration: underline;
+}
+
+.coach__done {
+  min-height: 38px;
+  padding: 8px 16px;
+}

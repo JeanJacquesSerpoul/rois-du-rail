@@ -30,7 +30,16 @@ export function TicketCard({ id, done, selected, onClick, points }: TicketCardPr
           <path key={i} d={d} fill="#e6dcc3" />
         ))}
         <path d={FRANCE_PATH} fill="#f6ebcf" stroke="#8a6d3b" strokeWidth="8" />
-        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#a8122a" strokeWidth="14" strokeDasharray="28 18" strokeLinecap="round" />
+        <line
+          x1={a.x}
+          y1={a.y}
+          x2={b.x}
+          y2={b.y}
+          stroke="#a8122a"
+          strokeWidth="14"
+          strokeDasharray="28 18"
+          strokeLinecap="round"
+        />
         <circle cx={a.x} cy={a.y} r="34" fill="#a8122a" stroke="#fff" strokeWidth="10" />
         <circle cx={b.x} cy={b.y} r="34" fill="#a8122a" stroke="#fff" strokeWidth="10" />
       </svg>
@@ -69,7 +78,10 @@ export function TicketPicker({ offered, min, onConfirm, busy, onPreview, onAdvic
   };
   const ok = keep.length >= Math.min(min, offered.length);
   return (
-    <Sheet title="Choisissez vos destinations" subtitle={`Gardez-en au moins ${min}. Les destinations non réalisées coûtent leurs points en fin de partie.`}>
+    <Sheet
+      title="Choisissez vos destinations"
+      subtitle={`Gardez-en au moins ${min}. Les destinations non réalisées coûtent leurs points en fin de partie.`}
+    >
       {onAdvice && (
         <div className="picker-advice">
           {advice ? (
@@ -124,7 +136,13 @@ export function Sheet({
   const ref = useRef<HTMLDivElement>(null);
   useFocusTrap(ref, onClose);
   return (
-    <motion.div className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+    <motion.div
+      className="sheet-backdrop"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
       <motion.div
         ref={ref}
         tabIndex={-1}

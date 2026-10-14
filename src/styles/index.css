@@ -1,0 +1,23 @@
+/* Feuilles de style par zone, importées dans l'ordre de la cascade d'origine. */
+@import "./base.css";
+@import "./buttons.css";
+@import "./toggles.css";
+@import "./home.css";
+@import "./setup.css";
+@import "./cards.css";
+@import "./board.css";
+@import "./panel.css";
+@import "./sheets.css";
+@import "./intro.css";
+@import "./settings.css";
+@import "./claim-fx.css";
+@import "./tutorial.css";
+@import "./advisor.css";
+@import "./dialog.css";
+@import "./tickets.css";
+@import "./claim.css";
+@import "./rules.css";
+@import "./end.css";
+@import "./cinematic.css";
+@import "./loading.css";
+@import "./responsive.css";

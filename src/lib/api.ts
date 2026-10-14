@@ -35,7 +35,8 @@ type GameResponse = { id: number; state: GameState };
 
 const httpApi = {
   listGames: () => call<GameSummary[]>('/api/games'),
-  createGame: (players: PlayerConfig[]) => call<GameResponse>('/api/games', { method: 'POST', body: JSON.stringify({ players }) }),
+  createGame: (players: PlayerConfig[]) =>
+    call<GameResponse>('/api/games', { method: 'POST', body: JSON.stringify({ players }) }),
   getGame: (id: number) => call<GameResponse>(`/api/games/${id}`),
   deleteGame: (id: number) => call<void>(`/api/games/${id}`, { method: 'DELETE' }),
   act: (id: number, seat: number, action: Action) =>

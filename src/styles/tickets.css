@@ -1,0 +1,192 @@
+/* billets de destination */
+
+.ticket {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px 8px 8px;
+  background: linear-gradient(180deg, #fffaf0, #f6e9c8);
+  border: 1.5px solid #c9b07a;
+  border-radius: 12px;
+  box-shadow: 0 3px 0 #c9b07a;
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.ticket::before,
+.ticket::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1.5px solid #c9b07a;
+  translate: 0 -50%;
+}
+
+.ticket::before {
+  left: -8px;
+}
+
+.ticket::after {
+  right: -8px;
+}
+
+.ticket--selected {
+  border-color: var(--red);
+  box-shadow: 0 3px 0 var(--red);
+}
+
+.ticket__map {
+  width: 52px;
+  height: 58px;
+  border-radius: 6px;
+  flex: 0 0 auto;
+  border: 1px solid #d9c79b;
+}
+
+.ticket__body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ticket__cities {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.ticket__arrow {
+  color: var(--red);
+  margin: 0 6px;
+}
+
+.ticket__points {
+  flex: 0 0 auto;
+  min-width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--navy);
+  color: var(--brass-2);
+  font-weight: 800;
+  border: 2px solid var(--brass);
+  padding: 0 4px;
+}
+
+.ticket__points.is-negative {
+  background: #7a0d1d;
+  color: #fff;
+}
+
+.ticket--done {
+  background: linear-gradient(180deg, #f3faef, #dcefd6);
+}
+
+.ticket__stamp {
+  position: absolute;
+  right: 54px;
+  top: 50%;
+  translate: 0 -50%;
+  rotate: -12deg;
+  padding: 2px 8px;
+  border: 2.5px solid var(--green);
+  color: var(--green);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.score-sum {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fffaf0;
+  border: 1.5px solid #d9c79b;
+  font-size: 0.9rem;
+}
+
+.score-sum__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+}
+
+.score-sum__row small {
+  color: var(--ink-soft);
+}
+
+.score-sum__row--good b {
+  color: var(--green);
+}
+
+.score-sum__row--risk b {
+  color: #a3112a;
+}
+
+.score-sum__row--total {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1.5px dashed #d9c79b;
+  font-weight: 800;
+}
+
+.score-sum__row--total b {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  color: var(--navy);
+}
+
+.ticket-grid,
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ticket-choice {
+  position: relative;
+  transition: opacity 0.2s;
+}
+
+.ticket-choice:not(.is-on) {
+  opacity: 0.55;
+}
+
+.ticket-choice__check {
+  position: absolute;
+  left: -4px;
+  top: -6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.ticket-choice:not(.is-on) .ticket-choice__check {
+  background: #bba98a;
+}

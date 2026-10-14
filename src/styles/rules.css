@@ -1,0 +1,59 @@
+/* règles & stats */
+
+.rules {
+  line-height: 1.5;
+}
+
+.rules h3 {
+  font-family: var(--display);
+  color: var(--red);
+  margin: 16px 0 4px;
+}
+
+.rules p {
+  margin: 4px 0;
+}
+
+.rules__cards {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.rules__cards > * {
+  width: 64px;
+}
+
+.rules__table,
+.stats {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+.rules__table th,
+.rules__table td,
+.stats th,
+.stats td {
+  border-bottom: 1px solid #e0d1ad;
+  padding: 6px;
+  text-align: center;
+}
+
+.rules__table th,
+.stats td:first-child,
+.stats th:first-child {
+  text-align: left;
+}
+
+.stats th {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stats__empty {
+  color: var(--ink-soft);
+}

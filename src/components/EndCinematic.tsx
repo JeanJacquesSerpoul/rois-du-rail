@@ -80,10 +80,13 @@ export function EndCinematic({ state, onDone }: { state: GameState; onDone: () =
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase('podium'), 2600);
-    const t2 = setTimeout(() => {
-      setPhase('winner');
-      music.fanfare();
-    }, 2600 + podiumDuration * 1000);
+    const t2 = setTimeout(
+      () => {
+        setPhase('winner');
+        music.fanfare();
+      },
+      2600 + podiumDuration * 1000,
+    );
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -91,7 +94,14 @@ export function EndCinematic({ state, onDone }: { state: GameState; onDone: () =
   }, [podiumDuration]);
 
   return (
-    <motion.div className="cine" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-label="Fin de partie">
+    <motion.div
+      className="cine"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      role="dialog"
+      aria-label="Fin de partie"
+    >
       <div className="cine__rays" data-on={phase === 'winner'} aria-hidden />
 
       <button type="button" className="cine__skip" onClick={onDone}>
@@ -159,7 +169,11 @@ export function EndCinematic({ state, onDone }: { state: GameState; onDone: () =
                 const height = 18 + (r.total / maxScore) * 62;
                 const isWinner = r.rank === 1;
                 return (
-                  <div key={r.seat} className={`cine__col ${isWinner ? 'is-winner' : ''}`} style={{ ['--pc' as string]: PLAYER_FILL[p.color], ['--pl' as string]: PLAYER_LIGHT[p.color] }}>
+                  <div
+                    key={r.seat}
+                    className={`cine__col ${isWinner ? 'is-winner' : ''}`}
+                    style={{ ['--pc' as string]: PLAYER_FILL[p.color], ['--pl' as string]: PLAYER_LIGHT[p.color] }}
+                  >
                     <motion.div
                       className="cine__avatar"
                       initial={{ y: 30, opacity: 0, scale: 0.5 }}
@@ -204,7 +218,13 @@ export function EndCinematic({ state, onDone }: { state: GameState; onDone: () =
                   ['30%', '40%', 1.4],
                   ['70%', '42%', 1.8],
                 ].map(([x, y, d], i) => (
-                  <Firework key={i} x={x as string} y={y as string} delay={d as number} color={FIREWORK_COLORS[i % FIREWORK_COLORS.length]} />
+                  <Firework
+                    key={i}
+                    x={x as string}
+                    y={y as string}
+                    delay={d as number}
+                    color={FIREWORK_COLORS[i % FIREWORK_COLORS.length]}
+                  />
                 ))}
                 <motion.button
                   type="button"

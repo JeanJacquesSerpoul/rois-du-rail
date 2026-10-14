@@ -24,7 +24,12 @@ export function AdvisorSheet({ advice, busy, onFollow, onClose }: Props) {
           >
             🧑‍✈️
           </motion.span>
-          <motion.div className="advisor__bubble" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+          <motion.div
+            className="advisor__bubble"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             <p className="advisor__headline">{advice.headline}</p>
             <ul className="advisor__reasons">
               {advice.reasons.map((r) => (

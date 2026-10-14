@@ -49,10 +49,7 @@ export interface Player extends PlayerConfig {
   routePoints: number;
 }
 
-export type TurnState =
-  | null
-  | { kind: 'draw'; drawn: 1 }
-  | { kind: 'tickets'; offered: number[]; min: number };
+export type TurnState = null | { kind: 'draw'; drawn: 1 } | { kind: 'tickets'; offered: number[]; min: number };
 
 export type Action =
   | { type: 'drawFaceUp'; index: number }

@@ -17,7 +17,6 @@ import { Coach } from './Tutorial';
 import { ClaimSheet, EventLog, HandView, Market, PlayersBar, TicketsSheet, Toasts } from './Panels';
 import { Sheet, TicketPicker } from './Tickets';
 
-
 // séquence de fin chargée à la demande : elle ne sert qu'une fois par partie
 const EndCinematic = lazy(() => import('./EndCinematic').then((m) => ({ default: m.EndCinematic })));
 
@@ -106,11 +105,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   }, [state, currentIsHuman]);
 
   // Joueur dont on montre la main (jeu en local : celui qui a l'appareil)
-  const viewer: number | null = !state
-    ? null
-    : currentIsHuman
-      ? state.current
-      : (lastHuman ?? humans[0] ?? state.current);
+  const viewer: number | null = !state ? null : currentIsHuman ? state.current : (lastHuman ?? humans[0] ?? state.current);
   const mustPassDevice =
     !!state && state.phase !== 'finished' && humans.length > 1 && currentIsHuman && revealed !== state.current;
   const myTurn = !!state && currentIsHuman && viewer === state.current && !mustPassDevice && state.phase !== 'finished';
@@ -150,7 +145,9 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
             state.owners[r.id] === undefined &&
             !routeBlockedByPair(state, r, viewer) &&
             me.wagons >= r.length &&
-            (handFocus === 'loco' ? paymentOptions(me.hand, r).some((p) => p.locos > 0) : computePayment(me.hand, r, handFocus) !== null),
+            (handFocus === 'loco'
+              ? paymentOptions(me.hand, r).some((p) => p.locos > 0)
+              : computePayment(me.hand, r, handFocus) !== null),
         ).map((r) => r.id),
       );
     }
@@ -246,7 +243,12 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
             </button>
           )}
           {!currentIsHuman && state.phase !== 'finished' && !rush && (
-            <button type="button" className="chip-btn" onClick={() => setRush(true)} title="Les ordinateurs jouent sans pause jusqu'à votre tour">
+            <button
+              type="button"
+              className="chip-btn"
+              onClick={() => setRush(true)}
+              title="Les ordinateurs jouent sans pause jusqu'à votre tour"
+            >
               ⏩ Accélérer
             </button>
           )}
@@ -298,7 +300,12 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
         <Toasts toasts={toasts} state={state} />
         <AnimatePresence>
           {error && (
-            <motion.div className="error-toast" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div
+              className="error-toast"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
               {error}
             </motion.div>
           )}

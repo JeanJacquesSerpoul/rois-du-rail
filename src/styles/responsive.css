@@ -1,0 +1,144 @@
+/* ------------------------------------------------------------------ grands écrans */
+
+@media (min-width: 960px) {
+  .log-btn {
+    display: none;
+  }
+
+  .game {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "top top" "board panel";
+  }
+
+  .panel {
+    border-top: 0;
+    border-left: 2px solid var(--brass);
+    padding: 16px;
+    gap: 16px;
+    overflow: hidden;
+  }
+
+  .market {
+    grid-template-columns: 1fr;
+  }
+
+  .market__cards {
+    gap: 10px;
+  }
+
+  .market__decks {
+    grid-template-columns: 1fr 1fr;
+    max-width: 60%;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .panel__hand {
+    flex-direction: column;
+    align-items: stretch;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 14px;
+    padding: 8px;
+  }
+
+  .hand {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .hand > div {
+    width: 62px;
+  }
+
+  .tickets-btn {
+    width: 100%;
+    flex-direction: row;
+    gap: 8px;
+    height: 44px;
+  }
+
+  .panel__log {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+  }
+
+  .log {
+    overflow-y: auto;
+  }
+
+  .sheet-backdrop {
+    align-items: center;
+  }
+
+  .sheet {
+    border-radius: 22px;
+    border: 3px solid var(--brass);
+    padding: 24px;
+  }
+
+  .city__label {
+    font-size: 13.5px;
+  }
+}
+
+/* téléphone à l'horizontale */
+@media (orientation: landscape) and (max-height: 520px) {
+  .game {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "top top" "board panel";
+  }
+
+  .topbar {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .player-chip__avatar {
+    width: 26px;
+    height: 26px;
+  }
+
+  .panel {
+    border-top: 0;
+    border-left: 2px solid var(--brass);
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .market {
+    grid-template-columns: 1fr;
+  }
+
+  .market__decks {
+    max-width: 50%;
+  }
+
+  .hand {
+    flex-wrap: wrap;
+  }
+
+  .hand > div {
+    width: 46px;
+  }
+}
+
+/* téléphone : noms de villes plus grands pour rester lisibles au zoom initial */
+@media (max-width: 600px) {
+  .city__label {
+    font-size: 18px;
+    stroke-width: 4.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

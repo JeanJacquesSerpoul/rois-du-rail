@@ -33,10 +33,20 @@ describe('moteur', () => {
         }
         expect(s.phase).toBe('finished');
         expect(s.results).toHaveLength(n);
-        const cards = s.deck.length + s.discard.length + s.market.filter(Boolean).length +
+        const cards =
+          s.deck.length +
+          s.discard.length +
+          s.market.filter(Boolean).length +
           s.players.reduce((t, p) => t + Object.values(p.hand).reduce((a, b) => a + b), 0);
         expect(cards).toBe(110);
-        if (seed === 1) console.log(n, 'joueurs', steps, 'actions', s.results!.map((r) => `${r.total}(${r.tickets.filter(t=>t.done).length}/${r.tickets.length})`).join(' '));
+        if (seed === 1)
+          console.log(
+            n,
+            'joueurs',
+            steps,
+            'actions',
+            s.results!.map((r) => `${r.total}(${r.tickets.filter((t) => t.done).length}/${r.tickets.length})`).join(' '),
+          );
       }
     });
   }
@@ -50,7 +60,10 @@ describe('moteur', () => {
 
 describe('niveaux de l’ordinateur', () => {
   const play = (levels: ('easy' | 'normal' | 'hard')[], seed: number) => {
-    let s = createGame(levels.map((level, i) => ({ name: `B${i}`, isBot: true, color: colors[i], level })), seed);
+    let s = createGame(
+      levels.map((level, i) => ({ name: `B${i}`, isBot: true, color: colors[i], level })),
+      seed,
+    );
     let steps = 0;
     while (s.phase !== 'finished' && steps++ < 5000) s = applyAction(s, s.current, botAction(s));
     return s;

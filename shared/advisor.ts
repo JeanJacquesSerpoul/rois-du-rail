@@ -38,7 +38,6 @@ const ticketLabel = (id: number) => {
 
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
 
-
 function cardsPhrase(color: CardColor, n: number): string {
   if (color === 'loco') return plural(n, 'locomotive');
   // « orange » est invariable, les autres couleurs prennent un s au pluriel
@@ -88,14 +87,20 @@ function explainClaim(s: GameState, seat: number, routeId: number, color: CardCo
   advice.cities = [route.a, route.b];
   advice.headline = `Prenez la route ${routeName(route)}`;
   if (pay) {
-    const parts = [pay.colored ? cardsPhrase(pay.color, pay.colored) : '', pay.locos ? cardsPhrase('loco', pay.locos) : ''].filter(Boolean);
+    const parts = [
+      pay.colored ? cardsPhrase(pay.color, pay.colored) : '',
+      pay.locos ? cardsPhrase('loco', pay.locos) : '',
+    ].filter(Boolean);
     advice.reasons.push(`Payez avec ${parts.join(' et ')} : +${ROUTE_POINTS[route.length]} points.`);
   }
   const users = ticketsUsing(s, seat, routeId);
   if (users.length) {
-    advice.reasons.push(`Elle sert ${users.length > 1 ? 'à vos billets' : 'à votre billet'} ${users.map(ticketLabel).join(', ')}.`);
+    advice.reasons.push(
+      `Elle sert ${users.length > 1 ? 'à vos billets' : 'à votre billet'} ${users.map(ticketLabel).join(', ')}.`,
+    );
     const detour = Math.max(...users.map((id) => detourCost(s, seat, routeId, id)));
-    if (detour === Infinity) advice.reasons.push('C’est le seul passage possible : si un adversaire la prend, le billet sera perdu.');
+    if (detour === Infinity)
+      advice.reasons.push('C’est le seul passage possible : si un adversaire la prend, le billet sera perdu.');
     else if (detour >= 2) advice.reasons.push(`Sans elle, le détour coûterait ${plural(detour, 'wagon')} de plus.`);
   } else if (route.length >= 4) {
     advice.reasons.push('Les routes longues rapportent beaucoup de points par wagon posé.');
@@ -194,10 +199,12 @@ export function advise(s: GameState, seat: number): Advice {
 
   // mises en garde générales
   for (const t of advice.tickets) {
-    if (t.state === 'blocked') advice.warnings.push(`Le billet ${t.label} n’est plus réalisable : il vous coûtera ${t.points} points.`);
+    if (t.state === 'blocked')
+      advice.warnings.push(`Le billet ${t.label} n’est plus réalisable : il vous coûtera ${t.points} points.`);
   }
   const missing = advice.tickets.reduce((n, t) => n + (t.missing ?? 0), 0);
-  if (missing > me.wagons) advice.warnings.push(`Vos billets demandent environ ${missing} wagons, il ne vous en reste que ${me.wagons}.`);
+  if (missing > me.wagons)
+    advice.warnings.push(`Vos billets demandent environ ${missing} wagons, il ne vous en reste que ${me.wagons}.`);
   const rival = s.players
     .map((p, i) => ({ p, i }))
     .filter(({ i }) => i !== seat)

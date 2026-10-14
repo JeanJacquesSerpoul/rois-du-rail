@@ -1,0 +1,228 @@
+/* panneau inférieur / latéral */
+
+.panel {
+  grid-area: panel;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%), var(--navy);
+  border-top: 2px solid var(--brass);
+  padding: 10px 10px calc(10px + var(--safe-b));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 3;
+  box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.market {
+  position: relative;
+  display: grid;
+  grid-template-columns: 5fr 2fr;
+  gap: 8px;
+}
+
+.market__badge {
+  position: absolute;
+  z-index: 2;
+  top: -12px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--brass);
+  color: var(--navy);
+  font-weight: 900;
+  font-size: 0.72rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.market__cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.market .train-card,
+.market .deck {
+  aspect-ratio: 4 / 3;
+}
+
+.market__decks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.deck {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.06) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg, #3a5378, #1b2a41);
+  border: 2px solid var(--brass);
+  display: grid;
+  place-items: center;
+  padding: 0 16%;
+  box-shadow:
+    2px 2px 0 #0e1726,
+    4px 4px 0 rgba(201, 162, 39, 0.5),
+    0 6px 12px rgba(0, 0, 0, 0.35);
+}
+
+.deck--tickets {
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.07) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg, #b11c34, #6e0b1b);
+}
+
+.deck:disabled {
+  filter: grayscale(0.5) brightness(0.75);
+}
+
+.deck__ticket-icon {
+  font-size: 1.2rem;
+}
+
+.deck__count {
+  position: absolute;
+  bottom: -7px;
+  right: -7px;
+  background: var(--cream);
+  color: var(--navy);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border: 1.5px solid var(--brass);
+}
+
+.panel__hand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hand {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 9px 9px 4px 2px;
+  min-height: 52px;
+  scrollbar-width: none;
+}
+
+.hand > div {
+  flex: 0 0 auto;
+  width: clamp(44px, 11vw, 62px);
+}
+
+.hand__empty,
+.hand--hidden {
+  color: rgba(243, 233, 210, 0.6);
+  font-size: 0.85rem;
+  font-style: italic;
+  align-self: center;
+}
+
+.tickets-btn {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 52px;
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--navy);
+  font-weight: 800;
+  font-size: 0.8rem;
+  border: 2px solid var(--brass);
+  box-shadow: 0 3px 0 #9c7c18;
+}
+
+.log-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--cream);
+  font-size: 0.68rem;
+}
+
+.tickets-btn:disabled {
+  opacity: 0.5;
+}
+
+.tickets-btn__icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.panel__log {
+  display: none;
+}
+
+.panel__log h3 {
+  font-family: var(--display);
+  color: var(--brass-2);
+  margin: 4px 0 8px;
+  font-size: 1rem;
+}
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: #d8dfe9;
+}
+
+.log li {
+  padding: 6px 8px 6px 10px;
+  border-left: 4px solid var(--pc);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 0 8px 8px 0;
+}
+
+/* journal ouvert dans une fenêtre (mobile) */
+.sheet .log {
+  color: var(--ink);
+}
+
+.sheet .log li {
+  background: #fffaf0;
+}
+
+/* écran de passage d'appareil */
+
+.pass-device {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 30px;
+  color: var(--cream);
+  text-align: center;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--pc) 70%, transparent), transparent 60%), var(--navy);
+}
+
+.pass-device__train {
+  font-size: 4rem;
+  animation: puff 1.4s infinite;
+}
+
+.pass-device__title {
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.pass-device__hint {
+  opacity: 0.8;
+  max-width: 300px;
+}

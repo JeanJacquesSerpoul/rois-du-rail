@@ -64,7 +64,14 @@ export default function App() {
       screen = <Game key={route.id} id={route.id} onExit={() => go('#/')} onNewGame={() => go('#/nouvelle')} />;
       break;
     default:
-      screen = <Home onNew={() => go('#/nouvelle')} onOpen={(id) => go(`#/partie/${id}`)} onIntro={() => setShowIntro(true)} onTutorial={tutorial} />;
+      screen = (
+        <Home
+          onNew={() => go('#/nouvelle')}
+          onOpen={(id) => go(`#/partie/${id}`)}
+          onIntro={() => setShowIntro(true)}
+          onTutorial={tutorial}
+        />
+      );
   }
 
   return (

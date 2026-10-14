@@ -1,0 +1,289 @@
+/* ------------------------------------------------------------------ final spectaculaire */
+
+.cine {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  overflow: hidden;
+  color: var(--cream);
+  background:
+    radial-gradient(ellipse at 50% 30%, #2b4470 0%, transparent 65%),
+    radial-gradient(ellipse at 50% 120%, #4a3410 0%, transparent 60%), #0b1322;
+}
+
+.cine__rays {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: 220vmax;
+  height: 220vmax;
+  translate: -50% -50%;
+  opacity: 0;
+  transition: opacity 0.8s;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 216, 74, 0.12) 0 8deg, transparent 8deg 20deg);
+  mask-image: radial-gradient(circle, #000 0%, transparent 32%);
+  animation: rays 24s linear infinite;
+  pointer-events: none;
+}
+
+.cine__rays[data-on="true"] {
+  opacity: 1;
+}
+
+@keyframes rays {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.cine__skip {
+  position: absolute;
+  top: calc(14px + var(--safe-t));
+  right: 14px;
+  z-index: 5;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cine__terminus {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+}
+
+.cine__title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(3.4rem, 16vw, 9rem);
+  line-height: 1;
+  color: var(--cream);
+  text-shadow:
+    0 6px 0 #0e1726,
+    0 0 40px rgba(255, 216, 74, 0.45);
+  white-space: nowrap;
+}
+
+.cine__title span {
+  display: inline-block;
+}
+
+.cine__subtitle {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brass-2);
+}
+
+.cine__rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18%;
+  height: 10px;
+  background: repeating-linear-gradient(90deg, #6b5430 0 7px, transparent 7px 20px);
+  border-top: 3px solid #9aa7ba;
+}
+
+.cine__train {
+  position: absolute;
+  bottom: calc(18% + 12px);
+  left: 0;
+  display: flex;
+  gap: 4px;
+}
+
+.cine__car {
+  width: clamp(60px, 14vw, 110px);
+}
+
+.cine__car--loco {
+  width: clamp(70px, 16vw, 128px);
+  transform: scaleX(-1);
+}
+
+.cine__podium-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: calc(70px + var(--safe-t)) 16px calc(24px + var(--safe-b));
+  gap: 18px;
+}
+
+.cine__winner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 2;
+}
+
+.cine__winner-kicker {
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--brass-2);
+  font-size: 0.85rem;
+}
+
+.cine__winner-name {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(2.2rem, 9vw, 4.4rem);
+  line-height: 1.05;
+  background: linear-gradient(100deg, #fff6c8 20%, #ffd84a 40%, #fff 50%, #ffd84a 60%, #c9a227 80%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.4s linear infinite;
+  filter: drop-shadow(0 4px 0 #0e1726);
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+.cine__podium {
+  flex: 1;
+  max-height: 62vh;
+  width: min(100%, 720px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(8px, 2.5vw, 22px);
+  z-index: 1;
+}
+
+.cine__col {
+  flex: 1;
+  max-width: 130px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cine__avatar {
+  position: relative;
+  width: clamp(42px, 11vw, 64px);
+  height: clamp(42px, 11vw, 64px);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: clamp(1.1rem, 4vw, 1.6rem);
+  background: var(--pc);
+  border: 3px solid var(--cream);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.cine__col.is-winner .cine__avatar {
+  border-color: #ffd84a;
+  box-shadow:
+    0 0 0 4px rgba(255, 216, 74, 0.35),
+    0 0 30px rgba(255, 216, 74, 0.7);
+}
+
+.cine__crown {
+  position: absolute;
+  top: -0.95em;
+  left: 50%;
+  translate: -50% 0;
+  font-size: 1.4em;
+}
+
+.cine__name {
+  font-weight: 800;
+  font-size: clamp(0.75rem, 3vw, 1rem);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cine__score {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(1.4rem, 6vw, 2.4rem);
+  color: var(--brass-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.cine__bar {
+  position: relative;
+  width: 100%;
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(180deg, var(--pl), var(--pc) 35%, color-mix(in srgb, var(--pc) 70%, black));
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-bottom: 0;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2),
+    0 -6px 24px color-mix(in srgb, var(--pc) 50%, transparent);
+  overflow: hidden;
+}
+
+.cine__col.is-winner .cine__bar {
+  border-color: #ffd84a;
+}
+
+.cine__rank {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  translate: -50% 0;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(1.3rem, 5vw, 2.2rem);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cine__cta {
+  z-index: 3;
+}
+
+.fw {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.fw__flash {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border-radius: 50%;
+  filter: blur(14px);
+}
+
+.fw__spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+}

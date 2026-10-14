@@ -11,7 +11,17 @@ const SPEEDS: [BotSpeed, string][] = [
   ['instant', 'Éclair'],
 ];
 
-function Switch({ on, onChange, label, music: isMusic }: { on: boolean; onChange: (v: boolean) => void; label: string; music?: boolean }) {
+function Switch({
+  on,
+  onChange,
+  label,
+  music: isMusic,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  music?: boolean;
+}) {
   return (
     <button
       type="button"
@@ -70,7 +80,11 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
         <Row icon="🎞️" title="Animation de pose" hint="Une locomotive pose les wagons de chaque route prise.">
           <Switch on={claimAnim} label="Animation de pose des wagons" onChange={(v) => setPref('claimAnim', v)} />
         </Row>
-        <Row icon="✨" title="Routes jouables en évidence" hint="Pendant votre tour, les routes que vous pouvez payer scintillent.">
+        <Row
+          icon="✨"
+          title="Routes jouables en évidence"
+          hint="Pendant votre tour, les routes que vous pouvez payer scintillent."
+        >
           <Switch on={showClaimable} label="Routes jouables en évidence" onChange={(v) => setPref('showClaimable', v)} />
         </Row>
         <Row icon="👁️" title="Mode daltonien" hint="Un symbole sur chaque couleur de carte et de route (♥ ◆ ★ ♣ ● ▲ ■ ○).">
@@ -87,13 +101,18 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
             <b>Vitesse des ordinateurs</b>
             <small>Temps de pause entre leurs actions.</small>
           </span>
-          <div className="segmented segmented--sm settings__speeds" role="group" aria-label="Vitesse des ordinateurs">
+          <fieldset className="segmented segmented--sm settings__speeds" aria-label="Vitesse des ordinateurs">
             {SPEEDS.map(([value, label]) => (
-              <button key={value} type="button" className={botSpeed === value ? 'is-on' : ''} onClick={() => setPref('botSpeed', value)}>
+              <button
+                key={value}
+                type="button"
+                className={botSpeed === value ? 'is-on' : ''}
+                onClick={() => setPref('botSpeed', value)}
+              >
                 {label}
               </button>
             ))}
-          </div>
+          </fieldset>
         </div>
       </div>
     </Sheet>
@@ -105,7 +124,13 @@ export function SettingsButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="music-toggle settings-btn" onClick={() => setOpen(true)} aria-label="Réglages" title="Réglages">
+      <button
+        type="button"
+        className="music-toggle settings-btn"
+        onClick={() => setOpen(true)}
+        aria-label="Réglages"
+        title="Réglages"
+      >
         <span aria-hidden>⚙️</span>
       </button>
       <AnimatePresence>{open && <SettingsSheet key="settings" onClose={() => setOpen(false)} />}</AnimatePresence>

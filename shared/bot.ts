@@ -1,11 +1,4 @@
-import {
-  TRAIN_COLORS,
-  claimStatus,
-  computePayment,
-  paymentOptions,
-  routeBlockedByPair,
-  ticketDone,
-} from './engine';
+import { TRAIN_COLORS, claimStatus, computePayment, paymentOptions, routeBlockedByPair, ticketDone } from './engine';
 import { ROUTES, ROUTE_BY_ID, TICKET_BY_ID } from './map';
 import type { Action, BotLevel, CardColor, GameState, Route, TrainColor } from './types';
 
@@ -70,7 +63,8 @@ export function planPath(
       const owner = s.owners[r.id];
       let w: number;
       if (owner === seat) w = 0;
-      else if (owner === undefined && !routeBlockedByPair(s, r, seat)) w = opts.planned?.has(r.id) ? 0 : r.length + (opts.turnCost ?? 0);
+      else if (owner === undefined && !routeBlockedByPair(s, r, seat))
+        w = opts.planned?.has(r.id) ? 0 : r.length + (opts.turnCost ?? 0);
       else continue;
       const d = dist.get(best)! + w;
       if (!dist.has(other) || d < dist.get(other)!) {
@@ -136,7 +130,8 @@ function chooseTickets(s: GameState, seat: number, offered: number[], min: numbe
   for (const t of scored.slice(min)) {
     const ok =
       level === 'hard'
-        ? t.cost <= 2 || (t.cost <= Math.min(HARD.extraMaxCost, budget - HARD.extraMargin) && t.points >= t.cost * HARD.extraRatio)
+        ? t.cost <= 2 ||
+          (t.cost <= Math.min(HARD.extraMaxCost, budget - HARD.extraMargin) && t.points >= t.cost * HARD.extraRatio)
         : t.cost <= Math.min(6, budget - 8);
     if (ok) {
       keep.push(t.id);
@@ -293,7 +288,7 @@ function hardAction(s: GameState, seat: number): Action {
     for (const tid of pending) {
       const t = TICKET_BY_ID[tid];
       const base = planPath(s, seat, t.a, t.b);
-      if (!base || !base.routes.some((r) => r.id === id)) continue;
+      if (!base?.routes.some((r) => r.id === id)) continue;
       const alt = planPath(s, seat, t.a, t.b, { exclude: id });
       critical += alt ? Math.min(8, alt.cost - base.cost) : 10;
     }
@@ -316,7 +311,8 @@ function hardAction(s: GameState, seat: number): Action {
   }
 
   // 2. Destinations terminées : en reprendre tant qu'il reste du temps
-  if (need.length === 0 && !endNear && me.wagons >= HARD.ticketMinWagons && s.ticketDeck.length > 0) return { type: 'drawTickets' };
+  if (need.length === 0 && !endNear && me.wagons >= HARD.ticketMinWagons && s.ticketDeck.length > 0)
+    return { type: 'drawTickets' };
 
   // 3. Sinon, maximiser les points : routes longues, de préférence collées à notre réseau
   if (need.length === 0 || s.lastRound) {

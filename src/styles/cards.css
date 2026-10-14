@@ -1,0 +1,105 @@
+/* ------------------------------------------------------------------ cartes wagon */
+
+.wagon-icon {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.train-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  border-radius: 8px;
+  padding: 0;
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--card) 70%, white) 0%,
+    var(--card) 45%,
+    color-mix(in srgb, var(--card) 78%, black) 100%
+  );
+  border: 2px solid #fdf8ea;
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.3),
+    0 5px 10px rgba(0, 0, 0, 0.25);
+  transition:
+    filter 0.2s,
+    opacity 0.2s,
+    transform 0.2s;
+}
+
+.train-card__inner {
+  position: absolute;
+  inset: 3px;
+  border-radius: 5px;
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+  display: grid;
+  place-items: center;
+  padding: 0 14%;
+}
+
+.train-card--loco {
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.35), transparent 50%, rgba(0, 0, 0, 0.25)),
+    conic-gradient(from 200deg, #d4473f, #ec8b2e, #f1c534, #4c9a4a, #3877c4, #b25599, #d4473f);
+}
+
+.train-card--loco .wagon-icon {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+.train-card--empty {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.train-card.is-dimmed {
+  filter: saturate(0.55) brightness(0.85);
+}
+
+.train-card.is-highlight {
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 0 3px var(--brass-2),
+    0 8px 16px rgba(0, 0, 0, 0.35);
+}
+
+button.train-card:not(:disabled):hover {
+  transform: translateY(-3px);
+}
+
+.train-card__symbol {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  z-index: 1;
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--ink);
+  text-shadow: 0 0 2px var(--card);
+}
+
+.train-card--loco .train-card__symbol {
+  color: #fff;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+.train-card__count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--navy);
+  color: var(--cream);
+  border: 2px solid var(--brass);
+  font-weight: 800;
+  font-size: 0.8rem;
+  display: grid;
+  place-items: center;
+}

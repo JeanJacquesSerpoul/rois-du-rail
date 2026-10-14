@@ -146,7 +146,12 @@ function SceneCards() {
           </motion.div>
         ))}
       </div>
-      <motion.div className="iv-callout" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 2.4, type: 'spring' }}>
+      <motion.div
+        className="iv-callout"
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 2.4, type: 'spring' }}
+      >
         🌈 La locomotive remplace n'importe quelle couleur
       </motion.div>
     </div>
@@ -190,7 +195,12 @@ function SceneClaim() {
           </motion.div>
         ))}
       </div>
-      <motion.div className="iv-points" initial={{ opacity: 0, scale: 0.3, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 3.4, type: 'spring' }}>
+      <motion.div
+        className="iv-points"
+        initial={{ opacity: 0, scale: 0.3, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ delay: 3.4, type: 'spring' }}
+      >
         +7 points
       </motion.div>
     </div>
@@ -215,7 +225,12 @@ function ScenePoints() {
       <div className="iv-bars">
         {POINTS.map(([len, pts], i) => (
           <div key={len} className="iv-bar">
-            <motion.span className="iv-bar__pts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 + i * 0.25 }}>
+            <motion.span
+              className="iv-bar__pts"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 + i * 0.25 }}
+            >
               {pts}
             </motion.span>
             <motion.div
@@ -254,11 +269,21 @@ function SceneTickets() {
         <TicketCard id={DEMO_TICKET.id} />
       </motion.div>
       <div className="iv-outcomes">
-        <motion.div className="iv-outcome iv-outcome--ok" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 2 }}>
+        <motion.div
+          className="iv-outcome iv-outcome--ok"
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 2 }}
+        >
           ✓ Villes reliées
           <b>+{DEMO_TICKET.points}</b>
         </motion.div>
-        <motion.div className="iv-outcome iv-outcome--ko" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 3.2 }}>
+        <motion.div
+          className="iv-outcome iv-outcome--ko"
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 3.2 }}
+        >
           ✗ Pas reliées
           <b>−{DEMO_TICKET.points}</b>
         </motion.div>
@@ -283,7 +308,12 @@ function SceneEnd() {
         <motion.span className="iv-counter__num">{shown}</motion.span>
         <span className="iv-counter__label">wagons</span>
       </div>
-      <motion.div className="iv-banner" initial={{ scale: 0, rotate: -8 }} animate={{ scale: 1, rotate: -3 }} transition={{ delay: 3.3, type: 'spring', stiffness: 260, damping: 12 }}>
+      <motion.div
+        className="iv-banner"
+        initial={{ scale: 0, rotate: -8 }}
+        animate={{ scale: 1, rotate: -3 }}
+        transition={{ delay: 3.3, type: 'spring', stiffness: 260, damping: 12 }}
+      >
         Dernier tour !
       </motion.div>
       <motion.div className="iv-medal" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 5 }}>
@@ -296,10 +326,20 @@ function SceneEnd() {
 function SceneOutro({ onFinish }: { onFinish: () => void }) {
   return (
     <div className="iv-scene iv-center iv-outro">
-      <motion.div className="iv-outro__train" initial={{ x: -200 }} animate={{ x: 0 }} transition={{ duration: 1.2, ease: 'easeOut' }}>
+      <motion.div
+        className="iv-outro__train"
+        initial={{ x: -200 }}
+        animate={{ x: 0 }}
+        transition={{ duration: 1.2, ease: 'easeOut' }}
+      >
         <span>🚂</span>
       </motion.div>
-      <motion.h2 className="iv-logo iv-logo--sm" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+      <motion.h2
+        className="iv-logo iv-logo--sm"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
         À vous de jouer !
       </motion.h2>
       <motion.button
@@ -538,7 +578,9 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
               <span className="intro__play" aria-hidden>
                 ▶
               </span>
-              <span className="intro__hint">Les règles en {Math.round(TOTAL / 60)} minute{TOTAL >= 90 ? 's' : ''} · touchez pour lancer</span>
+              <span className="intro__hint">
+                Les règles en {Math.round(TOTAL / 60)} minute{TOTAL >= 90 ? 's' : ''} · touchez pour lancer
+              </span>
             </button>
           )}
         </div>
@@ -580,7 +622,9 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
-          <span className="intro__time">{started ? `-${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}` : ''}</span>
+          <span className="intro__time">
+            {started ? `-${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}` : ''}
+          </span>
           {voice.supported && (
             <button
               type="button"

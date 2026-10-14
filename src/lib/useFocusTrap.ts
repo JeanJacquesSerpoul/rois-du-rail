@@ -8,8 +8,8 @@ const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select
  * d'origine à la fermeture.
  */
 export function useFocusTrap(ref: RefObject<HTMLElement | null>, onEscape?: () => void) {
-  const escape = useRef(onEscape);
-  escape.current = onEscape;
+  const escapeRef = useRef(onEscape);
+  escapeRef.current = onEscape;
 
   useEffect(() => {
     const root = ref.current;
@@ -20,9 +20,9 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>, onEscape?: () =
     if (!root.contains(document.activeElement)) (focusables()[0] ?? root).focus({ preventScroll: true });
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && escape.current) {
+      if (e.key === 'Escape' && escapeRef.current) {
         e.preventDefault();
-        escape.current();
+        escapeRef.current();
         return;
       }
       if (e.key !== 'Tab') return;

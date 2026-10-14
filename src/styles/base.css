@@ -1,0 +1,65 @@
+:root {
+  --navy: #1b2a41;
+  --navy-2: #243650;
+  --navy-3: #304868;
+  --brass: #c9a227;
+  --brass-2: #e7cc6e;
+  --cream: #f3e9d2;
+  --paper: #f8f0dd;
+  --paper-2: #efe2c2;
+  --ink: #2b2113;
+  --ink-soft: #6b5a3e;
+  --red: #a8122a;
+  --green: #2f8a4c;
+  --display: "Playfair Display", Georgia, serif;
+  --ui: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 14px;
+  --shadow: 0 10px 30px rgba(10, 15, 25, 0.35);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--ui);
+  color: var(--ink);
+  background: var(--navy);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  touch-action: manipulation;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--brass-2);
+  outline-offset: 2px;
+}

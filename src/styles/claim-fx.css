@@ -1,0 +1,12 @@
+/* animation de pose des wagons */
+
+.claim-fx__pts {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 26px;
+  fill: #ffd84a;
+  paint-order: stroke;
+  stroke: #3b2a12;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}

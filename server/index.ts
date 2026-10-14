@@ -20,7 +20,10 @@ app.post('/api/games', (req, res) => {
   const raw = (req.body?.players ?? []) as Partial<PlayerConfig>[];
   if (!Array.isArray(raw) || raw.length < 2 || raw.length > 5) throw new GameError('Il faut entre 2 et 5 joueurs.');
   const players: PlayerConfig[] = raw.map((p, i) => ({
-    name: String(p.name ?? '').trim().slice(0, 20) || `Joueur ${i + 1}`,
+    name:
+      String(p.name ?? '')
+        .trim()
+        .slice(0, 20) || `Joueur ${i + 1}`,
     isBot: Boolean(p.isBot),
     level: BOT_LEVELS.includes(p.level as BotLevel) ? p.level : 'normal',
     color: PLAYER_COLORS.includes(p.color as PlayerColor) ? (p.color as PlayerColor) : PLAYER_COLORS[i],

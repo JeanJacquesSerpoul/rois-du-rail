@@ -1,0 +1,239 @@
+/* ------------------------------------------------------------------ accueil */
+
+.home {
+  min-height: 100%;
+  position: relative;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse at 50% -10%, #3d5a82 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 110%, #3b2a12 0%, transparent 55%), var(--navy);
+  color: var(--cream);
+  padding-bottom: calc(30px + var(--safe-b));
+}
+
+.home__sky {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 20% 30%, #fff8 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 15%, #fff7 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 40% 8%, #fff6 50%, transparent 51%),
+    radial-gradient(1px 1px at 85% 40%, #fff5 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 10% 12%, #fff6 50%, transparent 51%);
+  pointer-events: none;
+}
+
+.home__hero {
+  position: relative;
+  text-align: center;
+  padding: calc(48px + var(--safe-t)) 20px 10px;
+}
+
+.home__kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  font-size: 0.7rem;
+  color: var(--brass-2);
+  font-weight: 800;
+}
+
+.home__title {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(3.2rem, 15vw, 6.5rem);
+  line-height: 0.95;
+  margin: 12px 0 10px;
+  color: var(--cream);
+  text-shadow:
+    0 4px 0 #0e1726,
+    0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.home__title span {
+  font-style: italic;
+  font-weight: 700;
+  color: var(--brass);
+  font-size: 0.55em;
+  vertical-align: 0.35em;
+}
+
+.home__tagline {
+  max-width: 420px;
+  margin: 0 auto;
+  color: #cfd8e6;
+  line-height: 1.45;
+}
+
+.hero-train {
+  position: relative;
+  /* hauteur suffisante pour que la fumée ne soit pas rognée par overflow: hidden */
+  height: 104px;
+  margin: -12px -20px 0;
+  overflow: hidden;
+}
+
+.hero-train__rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  height: 8px;
+  background: repeating-linear-gradient(90deg, #6b5430 0 6px, transparent 6px 18px);
+  border-top: 2px solid #9aa7ba;
+}
+
+.hero-train__convoy {
+  position: absolute;
+  bottom: 12px;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 3px;
+}
+
+.hero-train__car {
+  width: 64px;
+  display: block;
+}
+
+.hero-train__car--loco {
+  width: 72px;
+  /* l'icône regarde vers la gauche : on la retourne pour qu'elle tire le convoi */
+  transform: scaleX(-1);
+}
+
+.hero-train__car--loco .wagon-icon g {
+  fill: var(--cream);
+}
+
+.hero-train__smoke {
+  position: absolute;
+  right: 12px;
+  top: -18px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    -14px -8px 0 2px rgba(255, 255, 255, 0.25),
+    -30px -14px 0 4px rgba(255, 255, 255, 0.12);
+  animation: puff 1s infinite;
+}
+
+@keyframes puff {
+  50% {
+    transform: translateY(-4px) scale(1.15);
+  }
+}
+
+.home__main {
+  position: relative;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.home__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.home__error {
+  background: #ffe1e1;
+  color: #7a0d1d;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.home__note {
+  margin: 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #aab6c8;
+  line-height: 1.4;
+}
+
+.home__section h2 {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  margin: 18px 4px 10px;
+  color: var(--brass-2);
+}
+
+.game-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 6px 8px 6px 6px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+}
+
+.game-row__main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 6px;
+  min-width: 0;
+}
+
+.game-row__players {
+  display: flex;
+}
+
+.game-row__dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border: 2px solid var(--paper);
+  margin-left: -8px;
+}
+
+.game-row__dot:first-child {
+  margin-left: 0;
+}
+
+.game-row__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.game-row__text small {
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-row__go {
+  font-weight: 800;
+  color: var(--red);
+  white-space: nowrap;
+  font-size: 0.9rem;
+}

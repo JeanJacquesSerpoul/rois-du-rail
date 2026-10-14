@@ -1,0 +1,63 @@
+/* ------------------------------------------------------------------ feuilles modales */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(8, 12, 22, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheet {
+  color: var(--ink);
+  width: 100%;
+  max-width: 600px;
+  max-height: 88dvh;
+  overflow-y: auto;
+  background: var(--paper);
+  background-image: radial-gradient(ellipse at top, #fffaf0, transparent 60%);
+  border-radius: 22px 22px 0 0;
+  padding: 18px 16px calc(18px + var(--safe-b));
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.35);
+  border-top: 4px solid var(--brass);
+}
+
+.sheet:focus {
+  outline: none;
+}
+
+.sheet__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sheet__title {
+  font-family: var(--display);
+  font-size: 1.45rem;
+  margin: 0;
+  color: var(--navy);
+}
+
+.sheet__subtitle {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--cream);
+  border-color: rgba(201, 162, 39, 0.6);
+  box-shadow: none;
+}
+
+.btn--ghost:active:not(:disabled) {
+  box-shadow: none;
+}
