@@ -7,6 +7,7 @@ import { api } from '../lib/api';
 import { PLAYER_FILL } from '../lib/theme';
 import { Board } from './Board';
 import { EndScreen } from './EndScreen';
+import { MusicToggle } from './MusicToggle';
 import { ClaimSheet, EventLog, HandView, Market, PlayersBar, TicketsSheet, Toasts } from './Panels';
 import { TicketPicker } from './Tickets';
 
@@ -149,6 +150,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           ←
         </button>
         <PlayersBar state={state} viewer={viewer} />
+        <MusicToggle />
       </header>
 
       <main className="game__board">

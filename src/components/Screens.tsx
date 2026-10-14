@@ -4,6 +4,7 @@ import { LONGEST_BONUS, ROUTE_POINTS, WAGONS_PER_PLAYER } from '../../shared/eng
 import type { PlayerColor, PlayerConfig } from '../../shared/types';
 import { OFFLINE, api, type GameSummary, type LeaderRow } from '../lib/api';
 import { PLAYER_COLOR_NAMES, PLAYER_FILL } from '../lib/theme';
+import { MusicToggle } from './MusicToggle';
 import { Sheet } from './Tickets';
 import { TrainCard, WagonIcon } from './TrainCard';
 
@@ -63,6 +64,7 @@ export function Home({ onNew, onOpen }: { onNew: () => void; onOpen: (id: number
   return (
     <div className="home">
       <div className="home__sky" />
+      <MusicToggle className="home__music" />
       <header className="home__hero">
         <motion.p className="home__kicker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           Compagnie des chemins de fer de France
