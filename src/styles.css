@@ -1253,6 +1253,64 @@ button.train-card:not(:disabled):hover {
   line-height: 1.4;
 }
 
+/* boîte de confirmation */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 12, 22, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.dialog {
+  width: min(100%, 380px);
+  padding: 26px 22px 20px;
+  text-align: center;
+  color: var(--ink);
+  background: var(--paper);
+  background-image: radial-gradient(ellipse at top, #fffaf0, transparent 65%);
+  border: 3px solid var(--brass);
+  border-radius: 22px;
+  box-shadow: var(--shadow), inset 0 0 0 6px rgba(201, 162, 39, 0.15);
+}
+
+.dialog__icon {
+  width: 60px;
+  height: 60px;
+  margin: -56px auto 10px;
+  display: grid;
+  place-items: center;
+  font-size: 1.7rem;
+  border-radius: 50%;
+  background: var(--cream);
+  border: 3px solid var(--brass);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+}
+
+.dialog__title {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  margin: 0 0 6px;
+  color: var(--navy);
+}
+
+.dialog__message {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 /* billets de destination */
 
 .ticket {

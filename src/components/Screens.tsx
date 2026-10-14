@@ -5,6 +5,7 @@ import { BOT_LEVELS, BOT_LEVEL_NAMES } from '../../shared/bot';
 import type { BotLevel, PlayerColor, PlayerConfig } from '../../shared/types';
 import { OFFLINE, api, type GameSummary, type LeaderRow } from '../lib/api';
 import { PLAYER_COLOR_NAMES, PLAYER_FILL } from '../lib/theme';
+import { ConfirmDialog } from './ConfirmDialog';
 import { MusicToggle } from './MusicToggle';
 import { Sheet } from './Tickets';
 import { TrainCard, WagonIcon } from './TrainCard';
@@ -50,6 +51,8 @@ export function Home({ onNew, onOpen }: { onNew: () => void; onOpen: (id: number
   const [leaders, setLeaders] = useState<LeaderRow[] | null>(null);
   const [sheet, setSheet] = useState<'rules' | 'stats' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toDelete, setToDelete] = useState<GameSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const refresh = () =>
     api
@@ -119,7 +122,7 @@ export function Home({ onNew, onOpen }: { onNew: () => void; onOpen: (id: number
             <h2>Parties en cours</h2>
             <ul className="game-list">
               {ongoing.map((g) => (
-                <GameRow key={g.id} game={g} onOpen={onOpen} onDelete={() => api.deleteGame(g.id).then(refresh)} />
+                <GameRow key={g.id} game={g} onOpen={onOpen} onDelete={() => setToDelete(g)} />
               ))}
             </ul>
           </section>
@@ -129,7 +132,7 @@ export function Home({ onNew, onOpen }: { onNew: () => void; onOpen: (id: number
             <h2>Dernières parties</h2>
             <ul className="game-list">
               {finished.map((g) => (
-                <GameRow key={g.id} game={g} onOpen={onOpen} onDelete={() => api.deleteGame(g.id).then(refresh)} />
+                <GameRow key={g.id} game={g} onOpen={onOpen} onDelete={() => setToDelete(g)} />
               ))}
             </ul>
           </section>
@@ -137,8 +140,34 @@ export function Home({ onNew, onOpen }: { onNew: () => void; onOpen: (id: number
       </main>
 
       <AnimatePresence>
-        {sheet === 'rules' && <Rules onClose={() => setSheet(null)} />}
-        {sheet === 'stats' && <Stats rows={leaders} onClose={() => setSheet(null)} />}
+        {sheet === 'rules' && <Rules key="rules" onClose={() => setSheet(null)} />}
+        {sheet === 'stats' && <Stats key="stats" rows={leaders} onClose={() => setSheet(null)} />}
+        {toDelete && (
+          <ConfirmDialog
+            key="confirm-delete"
+            icon="🗑"
+            title={`Supprimer la partie n°${toDelete.id} ?`}
+            message={
+              toDelete.status === 'finished'
+                ? 'Son résultat disparaîtra aussi du classement.'
+                : 'La partie en cours sera définitivement perdue.'
+            }
+            confirmLabel="Supprimer"
+            busy={deleting}
+            onCancel={() => setToDelete(null)}
+            onConfirm={() => {
+              setDeleting(true);
+              api
+                .deleteGame(toDelete.id)
+                .then(refresh)
+                .catch((e) => setError(e.message))
+                .finally(() => {
+                  setDeleting(false);
+                  setToDelete(null);
+                });
+            }}
+          />
+        )}
       </AnimatePresence>
     </div>
   );
@@ -170,9 +199,7 @@ function GameRow({ game, onOpen, onDelete }: { game: GameSummary; onOpen: (id: n
         type="button"
         className="icon-btn"
         aria-label="Supprimer la partie"
-        onClick={() => {
-          if (confirm(`Supprimer la partie n°${game.id} ?`)) onDelete();
-        }}
+        onClick={onDelete}
       >
         🗑
       </button>
