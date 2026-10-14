@@ -48,7 +48,7 @@ interface PlanOptions {
  * Plus court chemin pour un joueur : ses routes coûtent 0, les routes libres
  * coûtent leur longueur, les routes adverses sont infranchissables.
  */
-function planPath(
+export function planPath(
   s: GameState,
   seat: number,
   from: string,
@@ -89,12 +89,12 @@ function planPath(
   return { cost: dist.get(to)!, routes };
 }
 
-function pendingTickets(s: GameState, seat: number): number[] {
+export function pendingTickets(s: GameState, seat: number): number[] {
   return s.players[seat].tickets.filter((id) => !ticketDone(s, seat, id));
 }
 
 /** Routes à prendre pour réaliser les destinations en cours. */
-function neededRoutes(s: GameState, seat: number, shared: boolean): Route[] {
+export function neededRoutes(s: GameState, seat: number, shared: boolean): Route[] {
   const need: Route[] = [];
   const planned = new Set<number>();
   // les plus gros billets d'abord : les petits viennent se greffer sur leur trajet

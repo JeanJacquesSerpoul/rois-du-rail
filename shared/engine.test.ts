@@ -71,3 +71,25 @@ describe('niveaux de l’ordinateur', () => {
     expect(diff / 20).toBeGreaterThan(15);
   });
 });
+
+describe('chef de gare', () => {
+  it('donne à chaque étape un conseil légal et expliqué', async () => {
+    const { advise } = await import('./advisor');
+    for (let seed = 1; seed <= 6; seed++) {
+      let s = createGame(
+        colors.slice(0, 3).map((color, i) => ({ name: `J${i}`, isBot: i > 0, color, level: 'normal' as const })),
+        seed * 4421,
+      );
+      let steps = 0;
+      while (s.phase !== 'finished' && steps++ < 5000) {
+        if (s.current === 0) {
+          const a = advise(s, 0);
+          expect(a.headline.length).toBeGreaterThan(0);
+          expect(a.reasons.length).toBeGreaterThan(0);
+          s = applyAction(s, 0, a.action);
+        } else s = applyAction(s, s.current, botAction(s));
+      }
+      expect(s.phase).toBe('finished');
+    }
+  });
+});

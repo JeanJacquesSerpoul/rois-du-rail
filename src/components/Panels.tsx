@@ -44,9 +44,10 @@ interface MarketProps {
   onFaceUp: (i: number) => void;
   onDeck: () => void;
   onTickets: () => void;
+  hint?: { marketIndex?: number; deck?: 'cards' | 'tickets' } | null;
 }
 
-export function Market({ state, canAct, onFaceUp, onDeck, onTickets }: MarketProps) {
+export function Market({ state, canAct, onFaceUp, onDeck, onTickets, hint }: MarketProps) {
   const secondDraw = state.turn?.kind === 'draw';
   const deckCount = state.deck.length + state.discard.length;
   return (
@@ -66,6 +67,7 @@ export function Market({ state, canAct, onFaceUp, onDeck, onTickets }: MarketPro
                   color={c}
                   size="md"
                   dimmed={!canAct || (secondDraw && c === 'loco')}
+                  highlight={hint?.marketIndex === i}
                   onClick={canAct && !(secondDraw && c === 'loco') ? () => onFaceUp(i) : undefined}
                 />
               </motion.div>
@@ -78,7 +80,7 @@ export function Market({ state, canAct, onFaceUp, onDeck, onTickets }: MarketPro
       <div className="market__decks">
         <motion.button
           type="button"
-          className="deck deck--cards"
+          className={`deck deck--cards ${hint?.deck === 'cards' ? 'is-hint' : ''}`}
           disabled={!canAct || deckCount === 0}
           onClick={onDeck}
           whileTap={{ scale: 0.92 }}
@@ -90,7 +92,7 @@ export function Market({ state, canAct, onFaceUp, onDeck, onTickets }: MarketPro
         </motion.button>
         <motion.button
           type="button"
-          className="deck deck--tickets"
+          className={`deck deck--tickets ${hint?.deck === 'tickets' ? 'is-hint' : ''}`}
           disabled={!canAct || secondDraw || state.ticketDeck.length === 0}
           onClick={onTickets}
           whileTap={{ scale: 0.92 }}

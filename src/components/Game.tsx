@@ -1,10 +1,12 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { advise, type Advice } from '../../shared/advisor';
 import { claimStatus, paymentOptions, ticketDone } from '../../shared/engine';
 import { ROUTES, ROUTE_BY_ID } from '../../shared/map';
 import type { Action, CardColor, GameEvent, GameState } from '../../shared/types';
 import { api } from '../lib/api';
 import { PLAYER_FILL } from '../lib/theme';
+import { AdvisorSheet } from './Advisor';
 import { Board } from './Board';
 import { EndScreen } from './EndScreen';
 import { MusicToggle } from './MusicToggle';
@@ -26,12 +28,17 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   const [toasts, setToasts] = useState<GameEvent[]>([]);
   const [flashRoute, setFlashRoute] = useState<number | null>(null);
   const [showEnd, setShowEnd] = useState(true);
+  // chef de gare : conseil affiché dans sa fenêtre, puis gardé en surbrillance jusqu'au prochain coup
+  const [advice, setAdvice] = useState<Advice | null>(null);
+  const [hint, setHint] = useState<Advice | null>(null);
   const lastSeq = useRef(0);
 
   const receive = useCallback((next: GameState, initial = false) => {
     const fresh = initial ? [] : next.events.filter((e) => e.seq > lastSeq.current);
     lastSeq.current = next.eventSeq;
     setState(next);
+    setHint(null);
+    setAdvice(null);
     const claimed = fresh.filter((e) => e.kind === 'claimRoute').pop();
     if (claimed?.routeId !== undefined) {
       setFlashRoute(claimed.routeId);
@@ -157,7 +164,8 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
         <Board
           state={state}
           selectedRoute={selectedRoute}
-          highlightCities={preview}
+          highlightCities={hint ? [...preview, ...hint.cities] : preview}
+          hintRoute={hint?.routeId ?? null}
           claimable={claimable}
           flashRoute={flashRoute}
           onRouteClick={(rid) => setSelectedRoute(rid)}
@@ -187,6 +195,25 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           >
             ✨ Routes jouables
           </button>
+          {myTurn && state.phase === 'playing' && state.turn?.kind !== 'tickets' && viewer !== null && (
+            <button
+              type="button"
+              className="chip-btn chip-btn--advisor"
+              onClick={() => {
+                const a = advise(state, viewer);
+                setAdvice(a);
+                setHint(a);
+              }}
+              title="Demander conseil au chef de gare"
+            >
+              🧑‍✈️ Chef de gare
+            </button>
+          )}
+          {hint && !advice && (
+            <button type="button" className="chip-btn is-on" onClick={() => setHint(null)}>
+              ✕ Conseil
+            </button>
+          )}
           {preview.length > 0 && (
             <button type="button" className="chip-btn is-on" onClick={() => setPreview([])}>
               ✕ Destinations
@@ -210,6 +237,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           onFaceUp={(i) => act({ type: 'drawFaceUp', index: i })}
           onDeck={() => act({ type: 'drawDeck' })}
           onTickets={() => act({ type: 'drawTickets' })}
+          hint={hint}
         />
         {viewer !== null && (
           <div className="panel__hand">
@@ -246,6 +274,10 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
             min={ticketChoice.min}
             busy={busy}
             onPreview={setPreview}
+            onAdvice={() => {
+              const a = advise(state, viewer!);
+              return { keep: a.action.type === 'keepTickets' ? a.action.keep : ticketChoice.offered, reasons: a.reasons };
+            }}
             onConfirm={(keep) => act({ type: 'keepTickets', keep })}
           />
         )}
@@ -257,6 +289,15 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
             busy={busy}
             onClaim={(color) => act({ type: 'claimRoute', routeId: selectedRoute, color })}
             onClose={() => setSelectedRoute(null)}
+          />
+        )}
+        {advice && (
+          <AdvisorSheet
+            key="advisor"
+            advice={advice}
+            busy={busy}
+            onFollow={() => act(advice.action)}
+            onClose={() => setAdvice(null)}
           />
         )}
         {showTickets && viewer !== null && (

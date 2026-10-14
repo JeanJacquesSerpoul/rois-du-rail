@@ -138,10 +138,12 @@ interface BoardProps {
   highlightCities: string[];
   claimable: Set<number>;
   flashRoute: number | null;
+  /** Route conseillée par le chef de gare. */
+  hintRoute?: number | null;
   onRouteClick: (id: number) => void;
 }
 
-export function Board({ state, selectedRoute, highlightCities, claimable, flashRoute, onRouteClick }: BoardProps) {
+export function Board({ state, selectedRoute, highlightCities, claimable, flashRoute, hintRoute = null, onRouteClick }: BoardProps) {
   const down = useRef<{ x: number; y: number } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   // Zoom initial : en portrait (mobile), la carte remplit la hauteur disponible.
@@ -190,10 +192,11 @@ export function Board({ state, selectedRoute, highlightCities, claimable, flashR
               return (
                 <g
                   key={g.route.id}
-                  className={`route ${owned ? 'route--owned' : ''} ${selected ? 'route--selected' : ''} ${canClaim ? 'route--claimable' : ''} ${flashRoute === g.route.id ? 'route--flash' : ''}`}
+                  className={`route ${owned ? 'route--owned' : ''} ${selected ? 'route--selected' : ''} ${canClaim ? 'route--claimable' : ''} ${flashRoute === g.route.id ? 'route--flash' : ''} ${hintRoute === g.route.id ? 'route--hint' : ''}`}
                   onClick={(e) => isTap(e) && onRouteClick(g.route.id)}
                 >
                   <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__hit" />
+                  {hintRoute === g.route.id && <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__hint" />}
                   {(selected || canClaim) && (
                     <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="route__glow" />
                   )}

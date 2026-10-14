@@ -54,10 +54,13 @@ interface PickerProps {
   onConfirm: (keep: number[]) => void;
   busy: boolean;
   onPreview: (cities: string[]) => void;
+  /** Conseil du chef de gare : billets à garder et explications. */
+  onAdvice?: () => { keep: number[]; reasons: string[] };
 }
 
-export function TicketPicker({ offered, min, onConfirm, busy, onPreview }: PickerProps) {
+export function TicketPicker({ offered, min, onConfirm, busy, onPreview, onAdvice }: PickerProps) {
   const [keep, setKeep] = useState<number[]>(offered);
+  const [advice, setAdvice] = useState<string[] | null>(null);
   const toggle = (id: number) => {
     const next = keep.includes(id) ? keep.filter((k) => k !== id) : [...keep, id];
     setKeep(next);
@@ -66,6 +69,31 @@ export function TicketPicker({ offered, min, onConfirm, busy, onPreview }: Picke
   const ok = keep.length >= Math.min(min, offered.length);
   return (
     <Sheet title="Choisissez vos destinations" subtitle={`Gardez-en au moins ${min}. Les destinations non réalisées coûtent leurs points en fin de partie.`}>
+      {onAdvice && (
+        <div className="picker-advice">
+          {advice ? (
+            <motion.ul className="picker-advice__list" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
+              <li className="picker-advice__who">🧑‍✈️ Le chef de gare :</li>
+              {advice.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </motion.ul>
+          ) : (
+            <button
+              type="button"
+              className="chip-btn picker-advice__btn"
+              onClick={() => {
+                const a = onAdvice();
+                setKeep(a.keep);
+                setAdvice(a.reasons);
+                onPreview(a.keep.flatMap((k) => [TICKET_BY_ID[k].a, TICKET_BY_ID[k].b]));
+              }}
+            >
+              🧑‍✈️ Demander conseil au chef de gare
+            </button>
+          )}
+        </div>
+      )}
       <div className="ticket-grid">
         {offered.map((id) => (
           <div key={id} className={`ticket-choice ${keep.includes(id) ? 'is-on' : ''}`}>
