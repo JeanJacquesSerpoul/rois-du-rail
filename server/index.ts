@@ -1,9 +1,9 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { botAction } from '../shared/bot';
+import { BOT_LEVELS, botAction } from '../shared/bot';
 import { GameError, applyAction, createGame } from '../shared/engine';
-import type { Action, PlayerColor, PlayerConfig } from '../shared/types';
+import type { Action, BotLevel, PlayerColor, PlayerConfig } from '../shared/types';
 import { deleteGame, getGame, insertGame, leaderboard, listGames, saveMove } from './db';
 
 const PLAYER_COLORS: PlayerColor[] = ['crimson', 'navy', 'forest', 'amber', 'violet'];
@@ -22,6 +22,7 @@ app.post('/api/games', (req, res) => {
   const players: PlayerConfig[] = raw.map((p, i) => ({
     name: String(p.name ?? '').trim().slice(0, 20) || `Joueur ${i + 1}`,
     isBot: Boolean(p.isBot),
+    level: BOT_LEVELS.includes(p.level as BotLevel) ? p.level : 'normal',
     color: PLAYER_COLORS.includes(p.color as PlayerColor) ? (p.color as PlayerColor) : PLAYER_COLORS[i],
   }));
   if (new Set(players.map((p) => p.color)).size !== players.length) throw new GameError('Chaque joueur doit avoir sa couleur.');

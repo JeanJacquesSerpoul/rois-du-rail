@@ -32,10 +32,14 @@ export interface Ticket {
 
 export type Hand = Record<CardColor, number>;
 
+export type BotLevel = 'easy' | 'normal' | 'hard';
+
 export interface PlayerConfig {
   name: string;
   isBot: boolean;
   color: PlayerColor;
+  /** Niveau de l'ordinateur (absent dans les anciennes parties : « normal »). */
+  level?: BotLevel;
 }
 
 export interface Player extends PlayerConfig {

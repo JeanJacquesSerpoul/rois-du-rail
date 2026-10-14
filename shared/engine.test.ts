@@ -47,3 +47,27 @@ describe('moteur', () => {
     expect(longestPath(s, 0)).toBe(ROUTE_BY_ID[0].length + ROUTE_BY_ID[1].length);
   });
 });
+
+describe('niveaux de l’ordinateur', () => {
+  const play = (levels: ('easy' | 'normal' | 'hard')[], seed: number) => {
+    let s = createGame(levels.map((level, i) => ({ name: `B${i}`, isBot: true, color: colors[i], level })), seed);
+    let steps = 0;
+    while (s.phase !== 'finished' && steps++ < 5000) s = applyAction(s, s.current, botAction(s));
+    return s;
+  };
+
+  it('termine les parties à tous les niveaux', () => {
+    for (let seed = 1; seed <= 8; seed++) expect(play(['easy', 'normal', 'hard', 'easy'], seed * 31).phase).toBe('finished');
+  });
+
+  it('le niveau difficile marque plus que le niveau facile', () => {
+    let diff = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const order: ('easy' | 'hard')[] = seed % 2 ? ['easy', 'hard'] : ['hard', 'easy'];
+      const s = play(order, seed * 977);
+      const score = (l: string) => s.results!.find((r) => order[r.seat] === l)!.total;
+      diff += score('hard') - score('easy');
+    }
+    expect(diff / 20).toBeGreaterThan(15);
+  });
+});

@@ -533,6 +533,19 @@ input {
   border-bottom-color: var(--pc);
 }
 
+.setup-player__level {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e0d1ad;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
 .setup__note {
   margin: 0;
   color: var(--ink-soft);

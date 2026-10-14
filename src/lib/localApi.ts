@@ -1,4 +1,4 @@
-import { botAction } from '../../shared/bot';
+import { BOT_LEVELS, botAction } from '../../shared/bot';
 import { applyAction, createGame } from '../../shared/engine';
 import type { Action, GameState, PlayerConfig } from '../../shared/types';
 import type { GameSummary, LeaderRow } from './api';
@@ -91,7 +91,11 @@ export const localApi = {
 
   createGame: (players: PlayerConfig[]) =>
     wrap(() => {
-      const configs = players.map((p, i) => ({ ...p, name: p.name.trim().slice(0, 20) || `Joueur ${i + 1}` }));
+      const configs = players.map((p, i) => ({
+        ...p,
+        name: p.name.trim().slice(0, 20) || `Joueur ${i + 1}`,
+        level: p.level && BOT_LEVELS.includes(p.level) ? p.level : 'normal',
+      }));
       if (new Set(configs.map((p) => p.color)).size !== configs.length) throw new Error('Chaque joueur doit avoir sa couleur.');
       const state = createGame(configs, Math.floor(Math.random() * 2 ** 31));
       const s = store();

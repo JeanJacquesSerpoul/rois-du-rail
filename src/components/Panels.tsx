@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { CARD_COLORS, COLOR_NAMES, ROUTE_POINTS, claimStatus, handSize, paymentOptions, routeName, ticketDone } from '../../shared/engine';
+import { BOT_LEVEL_NAMES } from '../../shared/bot';
 import { CITY_BY_ID, ROUTE_BY_ID, TICKET_BY_ID } from '../../shared/map';
 import type { CardColor, GameEvent, GameState } from '../../shared/types';
 import { CARD_FILL, PLAYER_FILL, PLAYER_LIGHT, ROUTE_FILL } from '../lib/theme';
@@ -24,6 +25,7 @@ export function PlayersBar({ state, viewer }: { state: GameState; viewer: number
               <span className="player-chip__name">
                 {p.name}
                 {viewer === i && !p.isBot && <span className="player-chip__you"> (vous)</span>}
+                {p.isBot && <span className="player-chip__you"> · {BOT_LEVEL_NAMES[p.level ?? 'normal']}</span>}
               </span>
               <span className="player-chip__stats">
                 <b>{p.routePoints}</b> pts · 🚃 {p.wagons} · 🃏 {handSize(p.hand)} · 🎫 {p.tickets.length}

@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { LONGEST_BONUS, ROUTE_POINTS, WAGONS_PER_PLAYER } from '../../shared/engine';
-import type { PlayerColor, PlayerConfig } from '../../shared/types';
+import { BOT_LEVELS, BOT_LEVEL_NAMES } from '../../shared/bot';
+import type { BotLevel, PlayerColor, PlayerConfig } from '../../shared/types';
 import { OFFLINE, api, type GameSummary, type LeaderRow } from '../lib/api';
 import { PLAYER_COLOR_NAMES, PLAYER_FILL } from '../lib/theme';
 import { MusicToggle } from './MusicToggle';
@@ -10,6 +11,7 @@ import { TrainCard, WagonIcon } from './TrainCard';
 
 const ALL_COLORS: PlayerColor[] = ['crimson', 'navy', 'forest', 'amber', 'violet'];
 const BOT_NAMES = ['Gustave', 'Simone', 'Marcel', 'Colette'];
+const LEVEL_ICONS: Record<BotLevel, string> = { easy: '🌱', normal: '🚂', hard: '🔥' };
 
 function storage(key: string, fallback: string) {
   try {
@@ -179,10 +181,15 @@ function GameRow({ game, onOpen, onDelete }: { game: GameSummary; onOpen: (id: n
 }
 
 export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) => Promise<void>; onBack: () => void }) {
+  // le dernier niveau choisi sert de niveau par défaut pour les nouveaux ordinateurs
+  const [defaultLevel] = useState<BotLevel>(() => {
+    const saved = storage('rdr.level', 'normal') as BotLevel;
+    return BOT_LEVELS.includes(saved) ? saved : 'normal';
+  });
   const [players, setPlayers] = useState<PlayerConfig[]>(() => [
-    { name: storage('rdr.name', 'Joueur 1'), isBot: false, color: 'crimson' },
-    { name: BOT_NAMES[0], isBot: true, color: 'navy' },
-    { name: BOT_NAMES[1], isBot: true, color: 'forest' },
+    { name: storage('rdr.name', 'Joueur 1'), isBot: false, color: 'crimson', level: defaultLevel },
+    { name: BOT_NAMES[0], isBot: true, color: 'navy', level: defaultLevel },
+    { name: BOT_NAMES[1], isBot: true, color: 'forest', level: defaultLevel },
   ]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -193,7 +200,7 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
       const next = [...ps];
       while (next.length < n) {
         const color = ALL_COLORS.find((c) => !next.some((p) => p.color === c))!;
-        next.push({ name: BOT_NAMES[next.length - 1] ?? `Joueur ${next.length + 1}`, isBot: true, color });
+        next.push({ name: BOT_NAMES[next.length - 1] ?? `Joueur ${next.length + 1}`, isBot: true, color, level: defaultLevel });
       }
       return next;
     });
@@ -214,12 +221,12 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
     setError(null);
     try {
       const firstHuman = players.find((p) => !p.isBot);
-      if (firstHuman) {
-        try {
-          localStorage.setItem('rdr.name', firstHuman.name);
-        } catch {
-          /* stockage indisponible */
-        }
+      const firstBot = players.find((p) => p.isBot);
+      try {
+        if (firstHuman) localStorage.setItem('rdr.name', firstHuman.name);
+        if (firstBot?.level) localStorage.setItem('rdr.level', firstBot.level);
+      } catch {
+        /* stockage indisponible */
       }
       await onStart(players);
     } catch (e) {
@@ -281,6 +288,18 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
                     🤖 Ordi
                   </button>
                 </div>
+                {p.isBot && (
+                  <div className="setup-player__level" role="group" aria-label={`Niveau de ${p.name}`}>
+                    <span>Niveau</span>
+                    <div className="segmented segmented--sm">
+                      {BOT_LEVELS.map((l) => (
+                        <button key={l} type="button" className={(p.level ?? 'normal') === l ? 'is-on' : ''} onClick={() => update(i, { level: l })}>
+                          {LEVEL_ICONS[l]} {BOT_LEVEL_NAMES[l]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </motion.li>
             ))}
           </AnimatePresence>
