@@ -1,25 +1,27 @@
 import { AnimatePresence, motion } from 'motion/react';
 import {
   CARD_COLORS,
-  COLOR_NAMES,
   LONGEST_BONUS,
   ROUTE_POINTS,
-  longestPath,
   claimStatus,
   handSize,
+  longestPath,
+  mapOf,
   paymentOptions,
   routeName,
   ticketDone,
 } from '../../shared/engine';
-import { BOT_LEVEL_NAMES } from '../../shared/bot';
-import { CITY_BY_ID, ROUTE_BY_ID, TICKET_BY_ID } from '../../shared/map';
+import { colorName } from '../../shared/i18n';
+import type { MessageKey } from '../../shared/i18n/fr';
 import type { CardColor, GameEvent, GameState } from '../../shared/types';
+import { formatEvent, useT } from '../lib/i18n';
 import { usePref } from '../lib/prefs';
 import { CARD_FILL, CARD_INK, COLOR_SYMBOL, PLAYER_FILL, PLAYER_LIGHT, ROUTE_FILL } from '../lib/theme';
 import { Sheet, TicketCard } from './Tickets';
 import { TrainCard, WagonIcon } from './TrainCard';
 
 export function PlayersBar({ state, viewer }: { state: GameState; viewer: number | null }) {
+  const { t } = useT();
   return (
     <div className="players">
       {state.players.map((p, i) => {
@@ -36,8 +38,8 @@ export function PlayersBar({ state, viewer }: { state: GameState; viewer: number
             <span className="player-chip__info">
               <span className="player-chip__name">
                 {p.name}
-                {viewer === i && !p.isBot && <span className="player-chip__you"> (vous)</span>}
-                {p.isBot && <span className="player-chip__you"> · {BOT_LEVEL_NAMES[p.level ?? 'normal']}</span>}
+                {viewer === i && !p.isBot && <span className="player-chip__you"> {t('players.you')}</span>}
+                {p.isBot && <span className="player-chip__you"> · {t(`level.${p.level ?? 'normal'}`)}</span>}
               </span>
               <span className="player-chip__stats">
                 <b>{p.routePoints}</b> pts · 🚃 {p.wagons} · 🃏 {handSize(p.hand)} · 🎫 {p.tickets.length}
@@ -60,13 +62,14 @@ interface MarketProps {
 }
 
 export function Market({ state, canAct, onFaceUp, onDeck, onTickets, hint }: MarketProps) {
+  const { t } = useT();
   const secondDraw = state.turn?.kind === 'draw';
   const deckCount = state.deck.length + state.discard.length;
   return (
     <div className="market">
       {secondDraw && canAct && (
         <motion.span className="market__badge" initial={{ scale: 0 }} animate={{ scale: 1 }}>
-          Carte 2/2
+          {t('market.secondCard')}
         </motion.span>
       )}
       <div className="market__cards">
@@ -101,7 +104,7 @@ export function Market({ state, canAct, onFaceUp, onDeck, onTickets, hint }: Mar
           disabled={!canAct || deckCount === 0}
           onClick={onDeck}
           whileTap={{ scale: 0.92 }}
-          aria-label="Piocher une carte cachée"
+          aria-label={t('market.drawDeck')}
         >
           <span className="deck__stack" />
           <WagonIcon color="#f3e3b5" />
@@ -113,7 +116,7 @@ export function Market({ state, canAct, onFaceUp, onDeck, onTickets, hint }: Mar
           disabled={!canAct || secondDraw || state.ticketDeck.length === 0}
           onClick={onTickets}
           whileTap={{ scale: 0.92 }}
-          aria-label="Piocher des destinations"
+          aria-label={t('market.drawTickets')}
         >
           <span className="deck__stack" />
           <span className="deck__ticket-icon">🎫</span>
@@ -138,11 +141,12 @@ export function HandView({
   focus?: CardColor | null;
   onFocus?: (c: CardColor | null) => void;
 }) {
+  const { t } = useT();
   const hand = state.players[seat].hand;
   const colors = CARD_COLORS.filter((c) => hand[c] > 0);
   return (
     <div className="hand">
-      {colors.length === 0 && <span className="hand__empty">Aucune carte en main</span>}
+      {colors.length === 0 && <span className="hand__empty">{t('hand.empty')}</span>}
       <AnimatePresence>
         {colors.map((c) => (
           <motion.div
@@ -175,22 +179,16 @@ interface ClaimSheetProps {
   onClose: () => void;
 }
 
-const STATUS_TEXT: Record<string, string> = {
-  owned: 'Route déjà prise.',
-  pair: 'Voie double : la voie parallèle est déjà prise (ou partie à moins de 4 joueurs).',
-  wagons: "Vous n'avez plus assez de wagons.",
-  cards: 'Vous n’avez pas les cartes nécessaires.',
-  notYourTurn: 'Vous ne pouvez pas prendre de route maintenant.',
-};
-
 export function ClaimSheet({ state, routeId, seat, busy, onClaim, onClose }: ClaimSheetProps) {
-  const route = ROUTE_BY_ID[routeId];
+  const { t, lang } = useT();
+  const map = mapOf(state);
+  const route = map.routeById[routeId];
   const owner = state.owners[routeId];
   const status = seat === null ? 'notYourTurn' : claimStatus(state, seat, routeId);
   const options = seat === null ? [] : paymentOptions(state.players[seat].hand, route);
   const colorBlind = usePref('colorBlind');
   return (
-    <Sheet title={routeName(route)} onClose={onClose}>
+    <Sheet title={routeName(map, route, lang)} onClose={onClose}>
       <div className="claim">
         <div className="claim__route">
           {Array.from({ length: route.length }, (_, i) => (
@@ -207,17 +205,17 @@ export function ClaimSheet({ state, routeId, seat, busy, onClaim, onClose }: Cla
           ))}
         </div>
         <p className="claim__meta">
-          {route.length} wagon{route.length > 1 ? 's' : ''} · couleur {COLOR_NAMES[route.color]} ·{' '}
-          <b>+{ROUTE_POINTS[route.length]} points</b>
-          {route.pair !== undefined && ' · voie double'}
+          {t('claim.wagons', { n: route.length })} · {t('claim.color', { color: colorName(t, route.color) })} ·{' '}
+          <b>{t('claim.points', { pts: ROUTE_POINTS[route.length] })}</b>
+          {route.pair !== undefined && ` · ${t('claim.double')}`}
         </p>
         {owner !== undefined ? (
           <p className="claim__owner" style={{ color: PLAYER_FILL[state.players[owner].color] }}>
-            Propriété de {state.players[owner].name}
+            {t('claim.owner', { name: state.players[owner].name })}
           </p>
         ) : status === 'ok' ? (
           <>
-            <p className="claim__hint">Choisissez comment payer :</p>
+            <p className="claim__hint">{t('claim.howToPay')}</p>
             <div className="claim__options">
               {options.map((p) => (
                 <motion.button
@@ -241,13 +239,13 @@ export function ClaimSheet({ state, routeId, seat, busy, onClaim, onClose }: Cla
                       <span className="pay-dot pay-dot--loco" /> ×{p.locos}
                     </span>
                   )}
-                  <span className="pay-option__go">Prendre</span>
+                  <span className="pay-option__go">{t('claim.take')}</span>
                 </motion.button>
               ))}
             </div>
           </>
         ) : (
-          <p className="claim__blocked">{STATUS_TEXT[status]}</p>
+          <p className="claim__blocked">{t(`claim.status.${status}` as MessageKey)}</p>
         )}
       </div>
     </Sheet>
@@ -256,11 +254,13 @@ export function ClaimSheet({ state, routeId, seat, busy, onClaim, onClose }: Cla
 
 /** Score détaillé en direct, avec ce que le joueur sait (ses billets et la table). */
 function ScoreSummary({ state, seat }: { state: GameState; seat: number }) {
+  const { t } = useT();
+  const map = mapOf(state);
   const me = state.players[seat];
   const doneIds = me.tickets.filter((id) => ticketDone(state, seat, id));
   const openIds = me.tickets.filter((id) => !doneIds.includes(id));
-  const ticketGain = doneIds.reduce((n, id) => n + TICKET_BY_ID[id].points, 0);
-  const ticketRisk = openIds.reduce((n, id) => n + TICKET_BY_ID[id].points, 0);
+  const ticketGain = doneIds.reduce((n, id) => n + map.ticketById[id].points, 0);
+  const ticketRisk = openIds.reduce((n, id) => n + map.ticketById[id].points, 0);
   const mine = longestPath(state, seat);
   const best = Math.max(0, ...state.players.map((_, i) => (i === seat ? 0 : longestPath(state, i))));
   const leads = mine > 0 && mine >= best;
@@ -268,26 +268,26 @@ function ScoreSummary({ state, seat }: { state: GameState; seat: number }) {
   return (
     <div className="score-sum">
       <div className="score-sum__row">
-        <span>🛤️ Routes posées</span>
+        <span>{t('score.routes')}</span>
         <b>{me.routePoints} pts</b>
       </div>
       <div className="score-sum__row score-sum__row--good">
-        <span>✓ Billets réalisés ({doneIds.length})</span>
+        <span>{t('score.done', { n: doneIds.length })}</span>
         <b>+{ticketGain}</b>
       </div>
       <div className="score-sum__row score-sum__row--risk">
-        <span>⏳ Billets en cours ({openIds.length})</span>
+        <span>{t('score.open', { n: openIds.length })}</span>
         <b>{ticketRisk ? `−${ticketRisk}` : '0'}</b>
       </div>
       <div className="score-sum__row">
         <span>
-          🏅 Plus long trajet : {mine} wagon{mine > 1 ? 's' : ''}
-          <small>{leads ? ' · en tête' : ` · record adverse ${best}`}</small>
+          {t('score.longest', { n: mine })}
+          <small>{leads ? ` · ${t('score.lead')}` : ` · ${t('score.rival', { n: best })}`}</small>
         </span>
         <b>{leads ? `+${LONGEST_BONUS}` : '0'}</b>
       </div>
       <div className="score-sum__row score-sum__row--total">
-        <span>Si la partie finissait maintenant</span>
+        <span>{t('score.ifEnded')}</span>
         <b>{total < 0 ? `−${-total}` : total} pts</b>
       </div>
     </div>
@@ -305,24 +305,23 @@ export function TicketsSheet({
   onClose: () => void;
   onShow: (cities: string[]) => void;
 }) {
+  const { t } = useT();
+  const map = mapOf(state);
   const tickets = state.players[seat].tickets;
   const done = tickets.filter((id) => ticketDone(state, seat, id)).length;
   return (
-    <Sheet
-      title="Vos destinations"
-      subtitle={`${done} / ${tickets.length} réalisées · touchez un billet pour le voir sur la carte`}
-      onClose={onClose}
-    >
+    <Sheet title={t('tickets.title')} subtitle={t('tickets.subtitle', { done, total: tickets.length })} onClose={onClose}>
       <ScoreSummary state={state} seat={seat} />
       <div className="ticket-list">
         {tickets.map((id) => (
           <TicketCard
             key={id}
+            map={map}
             id={id}
             done={ticketDone(state, seat, id)}
             onClick={() => {
-              const t = TICKET_BY_ID[id];
-              onShow([t.a, t.b]);
+              const ticket = map.ticketById[id];
+              onShow([ticket.a, ticket.b]);
               onClose();
             }}
           />
@@ -333,12 +332,13 @@ export function TicketsSheet({
 }
 
 export function EventLog({ state }: { state: GameState }) {
+  const { t, lang } = useT();
   const events = [...state.events].reverse().slice(0, 25);
   return (
     <ol className="log">
       {events.map((e) => (
         <li key={e.seq} style={{ ['--pc' as string]: PLAYER_FILL[state.players[e.seat].color] }}>
-          {e.text}
+          {formatEvent(e, state, t, lang)}
         </li>
       ))}
     </ol>
@@ -346,27 +346,24 @@ export function EventLog({ state }: { state: GameState }) {
 }
 
 export function Toasts({ toasts, state }: { toasts: GameEvent[]; state: GameState }) {
+  const { t, lang } = useT();
   return (
     <div className="toasts" aria-live="polite">
       <AnimatePresence>
-        {toasts.map((t) => (
+        {toasts.map((e) => (
           <motion.div
-            key={t.seq}
-            className={`toast toast--${t.kind}`}
-            style={{ ['--pc' as string]: PLAYER_FILL[state.players[t.seat].color] }}
+            key={e.seq}
+            className={`toast toast--${e.kind}`}
+            style={{ ['--pc' as string]: PLAYER_FILL[state.players[e.seat].color] }}
             initial={{ y: -20, opacity: 0, scale: 0.95 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ opacity: 0, x: 40 }}
             layout
           >
-            {t.text}
+            {formatEvent(e, state, t, lang)}
           </motion.div>
         ))}
       </AnimatePresence>
     </div>
   );
-}
-
-export function cityName(id: string) {
-  return CITY_BY_ID[id].name;
 }

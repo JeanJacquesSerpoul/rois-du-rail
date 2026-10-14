@@ -1,5 +1,4 @@
-import { TRAIN_COLORS, claimStatus, computePayment, paymentOptions, routeBlockedByPair, ticketDone } from './engine';
-import { ROUTES, ROUTE_BY_ID, TICKET_BY_ID } from './map';
+import { TRAIN_COLORS, claimStatus, computePayment, mapOf, paymentOptions, routeBlockedByPair, ticketDone } from './engine';
 import type { Action, BotLevel, CardColor, GameState, Route, TrainColor } from './types';
 
 export const BOT_LEVELS: BotLevel[] = ['easy', 'normal', 'hard'];
@@ -57,7 +56,7 @@ export function planPath(
     if (best === null) return null;
     if (best === to) break;
     done.add(best);
-    for (const r of ROUTES) {
+    for (const r of mapOf(s).routes) {
       const other = r.a === best ? r.b : r.b === best ? r.a : null;
       if (!other || done.has(other) || r.id === opts.exclude) continue;
       const owner = s.owners[r.id];
@@ -92,9 +91,9 @@ export function neededRoutes(s: GameState, seat: number, shared: boolean): Route
   const need: Route[] = [];
   const planned = new Set<number>();
   // les plus gros billets d'abord : les petits viennent se greffer sur leur trajet
-  const tickets = pendingTickets(s, seat).sort((a, b) => TICKET_BY_ID[b].points - TICKET_BY_ID[a].points);
+  const tickets = pendingTickets(s, seat).sort((a, b) => mapOf(s).ticketById[b].points - mapOf(s).ticketById[a].points);
   for (const id of tickets) {
-    const t = TICKET_BY_ID[id];
+    const t = mapOf(s).ticketById[id];
     const plan = planPath(s, seat, t.a, t.b, shared ? { planned, turnCost: HARD.turnCost } : {});
     if (!plan) continue;
     const wagons = plan.routes.reduce((n, r) => n + (planned.has(r.id) ? 0 : r.length), 0);
@@ -117,7 +116,7 @@ function chooseTickets(s: GameState, seat: number, offered: number[], min: numbe
   const planned = new Set(level === 'hard' ? neededRoutes(s, seat, true).map((r) => r.id) : []);
   const scored = offered
     .map((id) => {
-      const t = TICKET_BY_ID[id];
+      const t = mapOf(s).ticketById[id];
       const plan = planPath(s, seat, t.a, t.b, { planned });
       return { id, cost: plan ? plan.cost : Infinity, points: t.points };
     })
@@ -125,7 +124,7 @@ function chooseTickets(s: GameState, seat: number, offered: number[], min: numbe
   const keep = scored.slice(0, min).map((t) => t.id);
   if (level === 'easy') return keep;
 
-  const committed = [...planned].reduce((n, id) => n + ROUTE_BY_ID[id].length, 0);
+  const committed = [...planned].reduce((n, id) => n + mapOf(s).routeById[id].length, 0);
   let budget = wagons - committed - scored.slice(0, min).reduce((n, t) => n + (Number.isFinite(t.cost) ? t.cost : 0), 0);
   for (const t of scored.slice(min)) {
     const ok =
@@ -158,7 +157,9 @@ function wantedColors(s: GameState, seat: number, need: Route[], weights?: Map<n
 }
 
 function freeRoutes(s: GameState, seat: number): Route[] {
-  return ROUTES.filter((r) => claimStatus(s, seat, r.id) === 'ok').sort((a, b) => b.length - a.length);
+  return mapOf(s)
+    .routes.filter((r) => claimStatus(s, seat, r.id) === 'ok')
+    .sort((a, b) => b.length - a.length);
 }
 
 function claim(s: GameState, seat: number, r: Route): Action {
@@ -167,7 +168,7 @@ function claim(s: GameState, seat: number, r: Route): Action {
 
 /** Fin de tour : rien à piocher → poser n'importe quoi, sinon destinations, sinon passer. */
 function lastResort(s: GameState, seat: number): Action {
-  const any = ROUTES.find((r) => claimStatus(s, seat, r.id) === 'ok');
+  const any = mapOf(s).routes.find((r) => claimStatus(s, seat, r.id) === 'ok');
   if (any) {
     const pay = computePayment(s.players[seat].hand, any, bestPayment(s, seat, any).color)!;
     return { type: 'claimRoute', routeId: any.id, color: pay.color };
@@ -238,7 +239,7 @@ function normalAction(s: GameState, seat: number): Action {
   const counts = new Map<number, number>();
   for (const r of need) counts.set(r.id, (counts.get(r.id) ?? 0) + 1);
   const claimable = [...counts.keys()]
-    .map((id) => ROUTE_BY_ID[id])
+    .map((id) => mapOf(s).routeById[id])
     .filter((r) => claimStatus(s, seat, r.id) === 'ok')
     .sort((a, b) => b.length - a.length || counts.get(b.id)! - counts.get(a.id)!);
   for (const r of claimable) {
@@ -286,13 +287,13 @@ function hardAction(s: GameState, seat: number): Action {
   for (const id of counts.keys()) {
     let critical = 0;
     for (const tid of pending) {
-      const t = TICKET_BY_ID[tid];
+      const t = mapOf(s).ticketById[tid];
       const base = planPath(s, seat, t.a, t.b);
       if (!base?.routes.some((r) => r.id === id)) continue;
       const alt = planPath(s, seat, t.a, t.b, { exclude: id });
       critical += alt ? Math.min(8, alt.cost - base.cost) : 10;
     }
-    priority.set(id, ROUTE_BY_ID[id].length * HARD.longW + counts.get(id)! * 2 + critical * HARD.critW);
+    priority.set(id, mapOf(s).routeById[id].length * HARD.longW + counts.get(id)! * 2 + critical * HARD.critW);
   }
   const want = wantedColors(s, seat, need, priority);
   const locoValue = need.length > 0 ? HARD.locoValue : 0;
@@ -301,7 +302,7 @@ function hardAction(s: GameState, seat: number): Action {
 
   // 1. Routes utiles, des plus urgentes aux moins urgentes
   const claimable = [...priority.keys()]
-    .map((id) => ROUTE_BY_ID[id])
+    .map((id) => mapOf(s).routeById[id])
     .filter((r) => claimStatus(s, seat, r.id) === 'ok')
     .sort((a, b) => priority.get(b.id)! - priority.get(a.id)!);
   for (const r of claimable) {
@@ -316,7 +317,11 @@ function hardAction(s: GameState, seat: number): Action {
 
   // 3. Sinon, maximiser les points : routes longues, de préférence collées à notre réseau
   if (need.length === 0 || s.lastRound) {
-    const myCities = new Set(ROUTES.filter((r) => s.owners[r.id] === seat).flatMap((r) => [r.a, r.b]));
+    const myCities = new Set(
+      mapOf(s)
+        .routes.filter((r) => s.owners[r.id] === seat)
+        .flatMap((r) => [r.a, r.b]),
+    );
     const free = freeRoutes(s, seat).sort(
       (a, b) =>
         b.length +

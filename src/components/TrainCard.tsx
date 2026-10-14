@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import type { CardColor } from '../../shared/types';
-import { CARD_ADJ } from '../../shared/engine';
+import type { MessageKey } from '../../shared/i18n/fr';
+import { useT } from '../lib/i18n';
 import { usePref } from '../lib/prefs';
 import { CARD_FILL, CARD_INK, COLOR_SYMBOL } from '../lib/theme';
 
@@ -50,13 +51,16 @@ interface Props {
 export function TrainCard({ color, count, size = 'md', dimmed, onClick, highlight, label }: Props) {
   const Tag = onClick ? motion.button : motion.div;
   const colorBlind = usePref('colorBlind');
+  const { t } = useT();
   return (
     <Tag
       className={`train-card train-card--${size} ${color === 'loco' ? 'train-card--loco' : ''} ${dimmed ? 'is-dimmed' : ''} ${highlight ? 'is-highlight' : ''}`}
       style={{ ['--card' as string]: CARD_FILL[color], ['--ink' as string]: CARD_INK[color] }}
       onClick={onClick}
       whileTap={onClick ? { scale: 0.92 } : undefined}
-      aria-label={label ?? `Carte ${CARD_ADJ[color]}${count !== undefined ? ` ×${count}` : ''}`}
+      aria-label={
+        label ?? `${t('cards.label', { color: t(`card.${color}` as MessageKey) })}${count !== undefined ? ` ×${count}` : ''}`
+      }
       type={onClick ? 'button' : undefined}
     >
       {colorBlind && (

@@ -32,3 +32,10 @@
   display: flex;
   gap: 8px;
 }
+
+.lang-toggle {
+  font-weight: 900;
+  font-size: 0.8rem;
+  color: var(--cream);
+  letter-spacing: 0.05em;
+}

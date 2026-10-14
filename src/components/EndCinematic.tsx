@@ -5,6 +5,7 @@ import { music } from '../lib/music';
 import { getPref } from '../lib/prefs';
 import { playSfx } from '../lib/sfx';
 import { PLAYER_FILL, PLAYER_LIGHT } from '../lib/theme';
+import { useT } from '../lib/i18n';
 import { WagonIcon } from './TrainCard';
 
 /**
@@ -59,9 +60,9 @@ function CountUp({ to, delay, duration }: { to: number; delay: number; duration:
   return <motion.span>{rounded}</motion.span>;
 }
 
-const TITLE = 'Terminus !';
-
 export function EndCinematic({ state, onDone }: { state: GameState; onDone: () => void }) {
+  const { t } = useT();
+  const title = t('cine.title');
   const results = state.results ?? [];
   const [phase, setPhase] = useState<Phase>('terminus');
 
@@ -73,7 +74,7 @@ export function EndCinematic({ state, onDone }: { state: GameState; onDone: () =
   }, [ranked]);
   const maxScore = Math.max(1, ...results.map((r) => r.total));
   const winners = ranked.filter((r) => r.rank === 1);
-  const winnerNames = winners.map((r) => state.players[r.seat].name).join(' et ');
+  const winnerNames = winners.map((r) => state.players[r.seat].name).join(t('common.and'));
 
   // ordre de révélation : du dernier au premier
   const revealOrder = useMemo(() => [...ranked].reverse().map((r) => r.seat), [ranked]);
@@ -103,19 +104,19 @@ export function EndCinematic({ state, onDone }: { state: GameState; onDone: () =
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       role="dialog"
-      aria-label="Fin de partie"
+      aria-label={t('cine.label')}
     >
       <div className="cine__rays" data-on={phase === 'winner'} aria-hidden />
 
       <button type="button" className="cine__skip" onClick={onDone}>
-        {phase === 'winner' ? 'Voir le détail' : 'Passer'} ›
+        {phase === 'winner' ? t('cine.details') : t('common.skip')} ›
       </button>
 
       <AnimatePresence>
         {phase === 'terminus' && (
           <motion.div key="terminus" className="cine__terminus" exit={{ opacity: 0, scale: 1.15 }} transition={{ duration: 0.4 }}>
-            <h2 className="cine__title" aria-label={TITLE}>
-              {TITLE.split('').map((ch, i) => (
+            <h2 className="cine__title" aria-label={title}>
+              {title.split('').map((ch, i) => (
                 <motion.span
                   key={i}
                   initial={{ y: -120, opacity: 0, rotate: -20 }}
@@ -127,7 +128,7 @@ export function EndCinematic({ state, onDone }: { state: GameState; onDone: () =
               ))}
             </h2>
             <motion.p className="cine__subtitle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.7 }}>
-              Tout le monde descend !
+              {t('cine.subtitle')}
             </motion.p>
             <div className="cine__rail" />
             <motion.div
@@ -158,7 +159,7 @@ export function EndCinematic({ state, onDone }: { state: GameState; onDone: () =
                   animate={{ y: 0, opacity: 1, scale: 1 }}
                   transition={{ type: 'spring', stiffness: 220, damping: 14 }}
                 >
-                  <span className="cine__winner-kicker">{winners.length > 1 ? 'Égalité au sommet' : 'Roi du Rail'}</span>
+                  <span className="cine__winner-kicker">{winners.length > 1 ? t('cine.tie') : t('cine.king')}</span>
                   <span className="cine__winner-name">{winnerNames}</span>
                 </motion.div>
               )}
@@ -237,7 +238,7 @@ export function EndCinematic({ state, onDone }: { state: GameState; onDone: () =
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.2 }}
                 >
-                  🏆 Voir les résultats
+                  {t('cine.results')}
                 </motion.button>
               </>
             )}

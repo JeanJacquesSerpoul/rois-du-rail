@@ -1,5 +1,6 @@
 import { BOT_LEVELS, botAction } from '../../shared/bot';
-import { applyAction, createGame } from '../../shared/engine';
+import { GameError, applyAction, createGame } from '../../shared/engine';
+import { MAP_IDS, type MapId } from '../../shared/maps';
 import type { Action, GameState, PlayerConfig } from '../../shared/types';
 import type { GameSummary, LeaderRow } from './api';
 
@@ -46,7 +47,7 @@ const store = () => (memory ??= load());
 
 function getStored(id: number): StoredGame {
   const g = store().games[id];
-  if (!g) throw new Error('Partie introuvable.');
+  if (!g) throw new GameError('notFound', 'Partie introuvable.');
   return g;
 }
 
@@ -62,6 +63,7 @@ function summary(id: number, g: StoredGame): GameSummary {
   return {
     id,
     status: g.state.phase,
+    map_id: g.state.mapId ?? 'france',
     created_at: g.created_at,
     updated_at: g.updated_at,
     players: g.state.players.map((p, seat) => {
@@ -89,15 +91,16 @@ export const localApi = {
         .slice(0, 30),
     ),
 
-  createGame: (players: PlayerConfig[]) =>
+  createGame: (players: PlayerConfig[], mapId: MapId = 'france') =>
     wrap(() => {
       const configs = players.map((p, i) => ({
         ...p,
         name: p.name.trim().slice(0, 20) || `Joueur ${i + 1}`,
         level: p.level && BOT_LEVELS.includes(p.level) ? p.level : 'normal',
       }));
-      if (new Set(configs.map((p) => p.color)).size !== configs.length) throw new Error('Chaque joueur doit avoir sa couleur.');
-      const state = createGame(configs, Math.floor(Math.random() * 2 ** 31));
+      if (new Set(configs.map((p) => p.color)).size !== configs.length)
+        throw new GameError('colors', 'Chaque joueur doit avoir sa couleur.');
+      const state = createGame(configs, Math.floor(Math.random() * 2 ** 31), MAP_IDS.includes(mapId) ? mapId : 'france');
       const s = store();
       const id = s.nextId++;
       s.games[id] = { state, created_at: now(), updated_at: now() };
@@ -116,7 +119,7 @@ export const localApi = {
   act: (id: number, seat: number, action: Action) =>
     wrap(() => {
       const state = getStored(id).state;
-      if (state.players[seat]?.isBot) throw new Error('Ce joueur est contrôlé par l’ordinateur.');
+      if (state.players[seat]?.isBot) throw new GameError('botSeat', 'Ce joueur est contrôlé par l’ordinateur.');
       return update(id, applyAction(state, seat, action));
     }),
 

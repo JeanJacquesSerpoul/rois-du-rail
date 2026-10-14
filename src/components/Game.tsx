@@ -2,11 +2,10 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { advise, ticketStatuses, type Advice } from '../../shared/advisor';
 import { planPath } from '../../shared/bot';
-import { CARD_ADJ, claimStatus, computePayment, paymentOptions, routeBlockedByPair, ticketDone } from '../../shared/engine';
-import { TICKET_BY_ID } from '../../shared/map';
-import { ROUTES, ROUTE_BY_ID } from '../../shared/map';
+import { claimStatus, computePayment, mapOf, paymentOptions, routeBlockedByPair, ticketDone } from '../../shared/engine';
 import type { Action, CardColor, GameEvent, GameState } from '../../shared/types';
 import { api } from '../lib/api';
+import { errorText, useT } from '../lib/i18n';
 import { BOT_DELAYS, getPref, usePref } from '../lib/prefs';
 import { playSfx } from '../lib/sfx';
 import { PLAYER_FILL } from '../lib/theme';
@@ -23,6 +22,10 @@ import { Sheet, TicketPicker } from './Tickets';
 const EndCinematic = lazy(() => import('./EndCinematic').then((m) => ({ default: m.EndCinematic })));
 
 export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void; onNewGame: () => void }) {
+  const { t, lang } = useT();
+  // traducteur courant pour les rappels asynchrones (sans relancer les effets)
+  const tRef = useRef(t);
+  tRef.current = t;
   const [state, setState] = useState<GameState | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +99,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
     const claimed = fresh.filter((e) => e.kind === 'claimRoute').pop();
     if (claimed?.routeId !== undefined) {
       setFlashRoute(claimed.routeId);
-      const duration = Math.max(1800, (travelTime(ROUTE_BY_ID[claimed.routeId].length) + 1.8) * 1000);
+      const duration = Math.max(1800, (travelTime(mapOf(next).routeById[claimed.routeId].length) + 1.8) * 1000);
       setTimeout(() => setFlashRoute((r) => (r === claimed.routeId ? null : r)), duration);
     }
     const shown = fresh.filter(
@@ -112,7 +115,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
     api
       .getGame(id)
       .then((r) => receive(r.state, true))
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(errorText(e, tRef.current)));
   }, [id, receive]);
 
   // L'ordinateur joue tout seul, une action à la fois pour qu'on puisse suivre.
@@ -120,13 +123,13 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
     if (!state || state.phase === 'finished' || !state.players[state.current].isBot) return;
     const base = rush ? 0 : BOT_DELAYS[botSpeed];
     const delay = state.turn?.kind === 'draw' ? base * 0.6 : base;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       api
         .bot(id)
         .then((r) => receive(r.state))
-        .catch((e) => setError(e.message));
+        .catch((e) => setError(errorText(e, tRef.current)));
     }, delay);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [state, id, receive, rush, botSpeed]);
 
   const humans = useMemo(() => (state ? state.players.flatMap((p, i) => (p.isBot ? [] : [i])) : []), [state]);
@@ -155,7 +158,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
       if (action.type === 'claimRoute') setSelectedRoute(null);
       if (action.type === 'keepTickets') setPreview([]);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
       if (getPref('sfx')) playSfx('error');
     } finally {
       setBusy(false);
@@ -164,8 +167,8 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
 
   useEffect(() => {
     if (!error) return;
-    const t = setTimeout(() => setError(null), 3500);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setError(null), 3500);
+    return () => clearTimeout(timer);
   }, [error]);
 
   const handVisible = !!state && viewer !== null && !(humans.length > 1 && !myTurn && state.phase !== 'finished');
@@ -176,25 +179,31 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
     if (handFocus && handVisible) {
       const me = state.players[viewer];
       return new Set(
-        ROUTES.filter(
-          (r) =>
-            state.owners[r.id] === undefined &&
-            !routeBlockedByPair(state, r, viewer) &&
-            me.wagons >= r.length &&
-            (handFocus === 'loco'
-              ? paymentOptions(me.hand, r).some((p) => p.locos > 0)
-              : computePayment(me.hand, r, handFocus) !== null),
-        ).map((r) => r.id),
+        mapOf(state)
+          .routes.filter(
+            (r) =>
+              state.owners[r.id] === undefined &&
+              !routeBlockedByPair(state, r, viewer) &&
+              me.wagons >= r.length &&
+              (handFocus === 'loco'
+                ? paymentOptions(me.hand, r).some((p) => p.locos > 0)
+                : computePayment(me.hand, r, handFocus) !== null),
+          )
+          .map((r) => r.id),
       );
     }
     if (!myTurn || !showClaimable || state.turn !== null) return new Set<number>();
-    return new Set(ROUTES.filter((r) => claimStatus(state, viewer, r.id) === 'ok').map((r) => r.id));
+    return new Set(
+      mapOf(state)
+        .routes.filter((r) => claimStatus(state, viewer, r.id) === 'ok')
+        .map((r) => r.id),
+    );
   }, [state, myTurn, showClaimable, viewer, handFocus, handVisible]);
 
   const plans = useMemo<PlanOverlay[]>(() => {
     if (!state || !showPlans || viewer === null || !handVisible) return [];
     return ticketStatuses(state, viewer).map((t) => {
-      const ticket = TICKET_BY_ID[t.id];
+      const ticket = mapOf(state).ticketById[t.id];
       const routeIds = t.state === 'open' ? (planPath(state, viewer, ticket.a, ticket.b)?.routes.map((r) => r.id) ?? []) : [];
       return { id: t.id, a: ticket.a, b: ticket.b, state: t.state, routeIds };
     });
@@ -207,7 +216,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
 
   const handHighlight = useMemo(() => {
     if (!state || selectedRoute === null || viewer === null) return new Set<CardColor>();
-    const opts = paymentOptions(state.players[viewer].hand, ROUTE_BY_ID[selectedRoute]);
+    const opts = paymentOptions(state.players[viewer].hand, mapOf(state).routeById[selectedRoute]);
     return new Set<CardColor>(opts.flatMap((o) => (o.locos ? [o.color, 'loco' as CardColor] : [o.color])));
   }, [state, selectedRoute, viewer]);
 
@@ -215,10 +224,10 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
     return (
       <div className="loading">
         <div className="loading__train">🚂</div>
-        {error ?? 'Chargement de la partie…'}
+        {error ?? t('game.loading')}
         {error && (
           <button type="button" className="btn" onClick={onExit}>
-            Retour
+            {t('common.back')}
           </button>
         )}
       </div>
@@ -230,18 +239,19 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   const viewerTickets = viewer !== null ? state.players[viewer].tickets : [];
   const doneCount = viewer !== null ? viewerTickets.filter((t) => ticketDone(state, viewer, t)).length : 0;
 
+  const map = mapOf(state);
   let status: string;
-  if (state.phase === 'finished') status = 'Partie terminée';
-  else if (!currentIsHuman) status = `${current.name} réfléchit…`;
-  else if (state.phase === 'setup') status = `${current.name} : choisissez vos destinations`;
-  else if (state.turn?.kind === 'draw') status = 'Prenez une seconde carte';
-  else if (state.turn?.kind === 'tickets') status = 'Choisissez vos destinations';
-  else status = 'À vous : piochez, posez une route ou prenez des destinations';
+  if (state.phase === 'finished') status = t('status.finished');
+  else if (!currentIsHuman) status = t('status.botThinking', { name: current.name });
+  else if (state.phase === 'setup') status = t('status.setup', { name: current.name });
+  else if (state.turn?.kind === 'draw') status = t('status.secondCard');
+  else if (state.turn?.kind === 'tickets') status = t('status.chooseTickets');
+  else status = t('status.yourTurn');
 
   return (
     <div className="game">
       <header className="topbar">
-        <button type="button" className="icon-btn icon-btn--light" onClick={onExit} aria-label="Retour à l'accueil">
+        <button type="button" className="icon-btn icon-btn--light" onClick={onExit} aria-label={t('game.backHome')}>
           ←
         </button>
         <PlayersBar state={state} viewer={viewer} />
@@ -258,7 +268,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           focusRoute={selectedRoute ?? hint?.routeId ?? null}
           plans={plans}
           burstCities={
-            celebrations[0] ? [TICKET_BY_ID[celebrations[0].ticketId].a, TICKET_BY_ID[celebrations[0].ticketId].b] : []
+            celebrations[0] ? [map.ticketById[celebrations[0].ticketId].a, map.ticketById[celebrations[0].ticketId].b] : []
           }
           claimable={claimable}
           flashRoute={flashRoute}
@@ -273,22 +283,17 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
         >
           <span className="status__dot" />
           {status}
-          {state.lastRound && state.phase !== 'finished' && <span className="status__badge">Dernier tour</span>}
+          {state.lastRound && state.phase !== 'finished' && <span className="status__badge">{t('status.lastRound')}</span>}
         </motion.div>
         <div className="board-tools">
           {state.phase === 'finished' && !showEnd && (
             <button type="button" className="chip-btn is-on" onClick={() => setShowEnd(true)}>
-              🏆 Résultats
+              {t('game.results')}
             </button>
           )}
           {!currentIsHuman && state.phase !== 'finished' && !rush && (
-            <button
-              type="button"
-              className="chip-btn"
-              onClick={() => setRush(true)}
-              title="Les ordinateurs jouent sans pause jusqu'à votre tour"
-            >
-              ⏩ Accélérer
+            <button type="button" className="chip-btn" onClick={() => setRush(true)} title={t('game.rushTitle')}>
+              {t('game.rush')}
             </button>
           )}
           {myTurn && state.phase === 'playing' && state.turn?.kind !== 'tickets' && viewer !== null && (
@@ -296,14 +301,14 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
               type="button"
               className="chip-btn chip-btn--advisor"
               onClick={() => {
-                const a = advise(state, viewer);
+                const a = advise(state, viewer, lang);
                 setAdvice(a);
                 setHint(a);
                 setAdviceOpened(true);
               }}
-              title="Demander conseil au chef de gare"
+              title={t('game.advisorTitle')}
             >
-              🧑‍✈️ Chef de gare
+              {t('game.advisor')}
             </button>
           )}
           {handVisible && viewerTickets.length > 0 && state.phase !== 'finished' && (
@@ -312,24 +317,24 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
               className={`chip-btn ${showPlans ? 'is-on' : ''}`}
               onClick={() => setShowPlans((v) => !v)}
               aria-pressed={showPlans}
-              title="Afficher le trajet restant de chaque destination"
+              title={t('game.plansTitle')}
             >
-              🎫 Trajets
+              {t('game.plans')}
             </button>
           )}
           {handFocus && (
             <button type="button" className="chip-btn is-on" onClick={() => setHandFocus(null)}>
-              ✕ Aperçu {CARD_ADJ[handFocus]}
+              {t('game.clearPreview', { color: t(`card.${handFocus}`) })}
             </button>
           )}
           {hint && !advice && (
             <button type="button" className="chip-btn is-on" onClick={() => setHint(null)}>
-              ✕ Conseil
+              {t('game.clearHint')}
             </button>
           )}
           {preview.length > 0 && (
             <button type="button" className="chip-btn is-on" onClick={() => setPreview([])}>
-              ✕ Destinations
+              {t('game.clearTickets')}
             </button>
           )}
         </div>
@@ -364,7 +369,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
         {viewer !== null && (
           <div className="panel__hand">
             {humans.length > 1 && !myTurn && state.phase !== 'finished' ? (
-              <div className="hand hand--hidden">Main cachée jusqu'au tour du prochain joueur</div>
+              <div className="hand hand--hidden">{t('hand.hidden')}</div>
             ) : (
               <HandView state={state} seat={viewer} highlight={handHighlight} focus={handFocus} onFocus={setHandFocus} />
             )}
@@ -385,15 +390,15 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
               className="tickets-btn log-btn"
               onClick={() => setShowLog(true)}
               whileTap={{ scale: 0.94 }}
-              aria-label="Journal de la partie"
+              aria-label={t('log.title')}
             >
               <span className="tickets-btn__icon">📜</span>
-              <span>Journal</span>
+              <span>{t('log.short')}</span>
             </motion.button>
           </div>
         )}
         <div className="panel__log">
-          <h3>Journal</h3>
+          <h3>{t('log.short')}</h3>
           <EventLog state={state} />
         </div>
       </aside>
@@ -402,12 +407,13 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
         {ticketChoice && (
           <TicketPicker
             key={ticketChoice.offered.join('-')}
+            map={map}
             offered={ticketChoice.offered}
             min={ticketChoice.min}
             busy={busy}
             onPreview={setPreview}
             onAdvice={() => {
-              const a = advise(state, viewer!);
+              const a = advise(state, viewer!, lang);
               return { keep: a.action.type === 'keepTickets' ? a.action.keep : ticketChoice.offered, reasons: a.reasons };
             }}
             onConfirm={(keep) => act({ type: 'keepTickets', keep })}
@@ -434,7 +440,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           />
         )}
         {showLog && (
-          <Sheet key="log" title="Journal de la partie" onClose={() => setShowLog(false)}>
+          <Sheet key="log" title={t('log.title')} onClose={() => setShowLog(false)}>
             <EventLog state={state} />
           </Sheet>
         )}
@@ -457,8 +463,8 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
             }}
           >
             <span className="pass-device__train">🚂</span>
-            <span className="pass-device__title">Au tour de {current.name}</span>
-            <span className="pass-device__hint">Passez l'appareil, puis touchez l'écran pour révéler votre main.</span>
+            <span className="pass-device__title">{t('pass.title', { name: current.name })}</span>
+            <span className="pass-device__hint">{t('pass.hint')}</span>
           </motion.button>
         )}
         {state.phase === 'finished' && cinematic && (

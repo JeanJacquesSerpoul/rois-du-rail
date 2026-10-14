@@ -1,19 +1,11 @@
 import { motion } from 'motion/react';
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pan-pinch';
-import {
-  CITIES,
-  CITY_BY_ID,
-  FRANCE_PATH,
-  MAP_HEIGHT,
-  MAP_LABELS,
-  MAP_WIDTH,
-  NEIGHBOR_PATHS,
-  ROUTES,
-  project,
-} from '../../shared/map';
-import { COLOR_NAMES, ROUTE_POINTS, routeName } from '../../shared/engine';
+import { ROUTE_POINTS, cityName, mapOf, routeName } from '../../shared/engine';
+import { type Lang, colorName } from '../../shared/i18n';
+import type { GameMap } from '../../shared/maps';
 import type { GameState, PlayerColor, Route } from '../../shared/types';
+import { useT } from '../lib/i18n';
 import { usePref } from '../lib/prefs';
 import { CARD_INK, COLOR_SYMBOL, PLAYER_FILL, PLAYER_LIGHT, ROUTE_FILL } from '../lib/theme';
 
@@ -46,35 +38,49 @@ interface RouteGeom {
   y2: number;
 }
 
-const GEOMS: RouteGeom[] = ROUTES.map((route) => {
-  const a = CITY_BY_ID[route.a];
-  const b = CITY_BY_ID[route.b];
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy);
-  const ux = dx / len;
-  const uy = dy / len;
-  // décalage perpendiculaire pour les voies doubles
-  const off = route.pair === undefined ? 0 : route.id < route.pair ? -DOUBLE_OFFSET : DOUBLE_OFFSET;
-  const ox = -uy * off;
-  const oy = ux * off;
-  const margin = CITY_R + 2;
-  const usable = len - margin * 2;
-  const seg = usable / route.length;
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  const wagons = Array.from({ length: route.length }, (_, i) => {
-    const t = margin + seg * (i + 0.5);
-    return { x: a.x + ux * t + ox, y: a.y + uy * t + oy, w: Math.max(8, seg - 3.5), angle };
+function buildGeoms(map: GameMap): RouteGeom[] {
+  return map.routes.map((route) => {
+    const a = map.cityById[route.a];
+    const b = map.cityById[route.b];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len;
+    const uy = dy / len;
+    // décalage perpendiculaire pour les voies doubles
+    const off = route.pair === undefined ? 0 : route.id < route.pair ? -DOUBLE_OFFSET : DOUBLE_OFFSET;
+    const ox = -uy * off;
+    const oy = ux * off;
+    const margin = CITY_R + 2;
+    const usable = len - margin * 2;
+    const seg = usable / route.length;
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+    const wagons = Array.from({ length: route.length }, (_, i) => {
+      const t = margin + seg * (i + 0.5);
+      return { x: a.x + ux * t + ox, y: a.y + uy * t + oy, w: Math.max(8, seg - 3.5), angle };
+    });
+    return {
+      route,
+      wagons,
+      x1: a.x + ux * margin + ox,
+      y1: a.y + uy * margin + oy,
+      x2: b.x - ux * margin + ox,
+      y2: b.y - uy * margin + oy,
+    };
   });
-  return {
-    route,
-    wagons,
-    x1: a.x + ux * margin + ox,
-    y1: a.y + uy * margin + oy,
-    x2: b.x - ux * margin + ox,
-    y2: b.y - uy * margin + oy,
-  };
-});
+}
+
+const GEOM_CACHE = new Map<string, RouteGeom[]>();
+
+/** Géométrie des routes d'une carte (calculée une fois par carte). */
+function geomsFor(map: GameMap): RouteGeom[] {
+  let g = GEOM_CACHE.get(map.id);
+  if (!g) {
+    g = buildGeoms(map);
+    GEOM_CACHE.set(map.id, g);
+  }
+  return g;
+}
 
 /** Distance d'un point au segment d'une route (unités SVG). */
 function distToRoute(px: number, py: number, g: RouteGeom): number {
@@ -113,14 +119,14 @@ export const travelTime = (length: number) => 0.35 + 0.28 * length;
  * Animation de pose d'une route : une locomotive parcourt le tronçon en laissant
  * ses wagons derrière elle, de la vapeur, des ondes aux deux villes et les points gagnés.
  */
-function ClaimFx({ g, color }: { g: RouteGeom; color: PlayerColor }) {
+function ClaimFx({ map, g, color }: { map: GameMap; g: RouteGeom; color: PlayerColor }) {
   const len = g.route.length;
   const T = travelTime(len);
   const angle = g.wagons[0].angle;
   const mx = (g.x1 + g.x2) / 2;
   const my = (g.y1 + g.y2) / 2;
-  const a = CITY_BY_ID[g.route.a];
-  const b = CITY_BY_ID[g.route.b];
+  const a = map.cityById[g.route.a];
+  const b = map.cityById[g.route.b];
   const ring = { transformBox: 'fill-box', transformOrigin: 'center' } as const;
   return (
     <g className="claim-fx" pointerEvents="none">
@@ -215,8 +221,10 @@ const PAPER_NOISE = `data:image/svg+xml;utf8,${encodeURIComponent(
 )}`;
 
 /** Fond de la carte. Les couleurs viennent de variables CSS (--map-*) : thème jour ou crépuscule. */
-const Background = memo(function Background() {
-  const [cx, cy] = project(-3.9, 44.4);
+const Background = memo(function Background({ map, lang }: { map: GameMap; lang: Lang }) {
+  const [cx, cy] = map.compass;
+  const W = map.width;
+  const H = map.height;
   return (
     <g>
       <defs>
@@ -254,31 +262,44 @@ const Background = memo(function Background() {
           <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#3b2b12" floodOpacity=".35" />
         </filter>
       </defs>
-      <rect width={MAP_WIDTH} height={MAP_HEIGHT} className="map-sea" />
-      <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#waves)" />
-      {NEIGHBOR_PATHS.map((d, i) => (
+      <rect width={W} height={H} className="map-sea" />
+      <rect width={W} height={H} fill="url(#waves)" />
+      {map.neighborPaths.map((d, i) => (
         <g key={i}>
           <path d={d} className="map-neighbor" strokeWidth="1.2" />
           <path d={d} fill="url(#hatch)" />
         </g>
       ))}
-      <path
-        d={FRANCE_PATH}
-        fill="url(#land)"
-        className="map-coast"
-        strokeWidth="2.2"
-        strokeLinejoin="round"
-        filter="url(#shadow)"
-      />
-      <path d={FRANCE_PATH} fill="none" className="map-coast" strokeOpacity=".25" strokeWidth="7" strokeLinejoin="round" />
-      {MAP_LABELS.map((l) => {
-        const [x, y] = project(l.lon, l.lat);
-        return (
-          <text key={l.text} x={x} y={y} className={`map-label map-label--${l.kind}`} textAnchor="middle">
-            {l.text}
-          </text>
-        );
-      })}
+      {map.landPaths.map((d, i) => (
+        <path
+          key={`land-${i}`}
+          d={d}
+          fill="url(#land)"
+          className="map-coast"
+          strokeWidth="2.2"
+          strokeLinejoin="round"
+          filter="url(#shadow)"
+        />
+      ))}
+      {map.landPaths.map((d, i) => (
+        <path
+          key={`coast-${i}`}
+          d={d}
+          fill="none"
+          className="map-coast"
+          strokeOpacity=".25"
+          strokeWidth="7"
+          strokeLinejoin="round"
+        />
+      ))}
+      {map.borderPaths.map((d, i) => (
+        <path key={`border-${i}`} d={d} className="map-border" />
+      ))}
+      {map.labels.map((l) => (
+        <text key={l.text.fr} x={l.x} y={l.y} className={`map-label map-label--${l.kind}`} textAnchor="middle">
+          {l.text[lang]}
+        </text>
+      ))}
       {/* rose des vents */}
       <g transform={`translate(${cx} ${cy})`} className="compass">
         <circle r="34" fill="none" stroke="#6b5430" strokeOpacity=".5" strokeWidth="1.2" />
@@ -291,17 +312,10 @@ const Background = memo(function Background() {
         </text>
       </g>
       {/* papier : grain et plis d'une vieille carte dépliée */}
-      <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#paper)" className="map-paper" pointerEvents="none" />
-      <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#fold)" pointerEvents="none" />
-      <rect
-        width={MAP_WIDTH}
-        height={MAP_HEIGHT}
-        fill="url(#fold)"
-        transform={`rotate(90 ${MAP_WIDTH / 2} ${MAP_HEIGHT / 2})`}
-        opacity=".7"
-        pointerEvents="none"
-      />
-      <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#vignette)" pointerEvents="none" />
+      <rect width={W} height={H} fill="url(#paper)" className="map-paper" pointerEvents="none" />
+      <rect width={W} height={H} fill="url(#fold)" pointerEvents="none" />
+      <rect width={W} height={H} fill="url(#fold)" transform={`rotate(90 ${W / 2} ${H / 2})`} opacity=".7" pointerEvents="none" />
+      <rect width={W} height={H} fill="url(#vignette)" pointerEvents="none" />
     </g>
   );
 });
@@ -327,6 +341,8 @@ interface RouteViewProps {
   hint: boolean;
   claimAnim: boolean;
   colorBlind: boolean;
+  /** Libellé lu par les lecteurs d'écran quand la route est jouable. */
+  label?: string;
   onActivate: (id: number) => void;
 }
 
@@ -343,6 +359,7 @@ const RouteView = memo(function RouteView({
   hint,
   claimAnim,
   colorBlind,
+  label,
   onActivate,
 }: RouteViewProps) {
   const { route } = g;
@@ -355,11 +372,7 @@ const RouteView = memo(function RouteView({
       // routes jouables (et route conseillée) atteignables au clavier
       tabIndex={focusable ? 0 : undefined}
       role={focusable ? 'button' : undefined}
-      aria-label={
-        focusable
-          ? `${routeName(route)}, ${route.length} wagon${route.length > 1 ? 's' : ''}, ${COLOR_NAMES[route.color]}`
-          : undefined
-      }
+      aria-label={focusable ? label : undefined}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -440,15 +453,16 @@ const RouteView = memo(function RouteView({
 
 function ZoomControls() {
   const { zoomIn, zoomOut, resetTransform } = useControls();
+  const { t } = useT();
   return (
     <div className="zoom-controls">
-      <button type="button" onClick={() => zoomIn()} aria-label="Zoomer">
+      <button type="button" onClick={() => zoomIn()} aria-label={t('board.zoomIn')}>
         +
       </button>
-      <button type="button" onClick={() => zoomOut()} aria-label="Dézoomer">
+      <button type="button" onClick={() => zoomOut()} aria-label={t('board.zoomOut')}>
         −
       </button>
-      <button type="button" onClick={() => resetTransform()} aria-label="Recentrer">
+      <button type="button" onClick={() => resetTransform()} aria-label={t('board.reset')}>
         ⤢
       </button>
     </div>
@@ -491,6 +505,9 @@ export function Board({
   const svgRef = useRef<SVGSVGElement>(null);
   const colorBlind = usePref('colorBlind');
   const theme = useMapTheme();
+  const { t, lang } = useT();
+  const map = mapOf(state);
+  const geoms = geomsFor(map);
   // routes candidates quand un toucher tombe entre deux voies (routes doubles, tronçons serrés)
   const [chooser, setChooser] = useState<{ x: number; y: number; ids: number[] } | null>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -500,9 +517,9 @@ export function Board({
     const el = box.current;
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
-    const fitHeight = (width * MAP_HEIGHT) / MAP_WIDTH;
+    const fitHeight = (width * map.height) / map.width;
     setFillScale(Math.min(2.2, Math.max(1, height / fitHeight)));
-  }, []);
+  }, [map]);
   // rappel stable : les routes mémoïsées ne se redessinent pas quand le parent change de fonction
   const routeClick = useRef(onRouteClick);
   routeClick.current = onRouteClick;
@@ -520,7 +537,8 @@ export function Board({
     if (!ctm) return;
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
     const unit = 1 / ctm.a; // unités SVG par pixel écran
-    const hits = GEOMS.map((g) => ({ id: g.route.id, d: distToRoute(pt.x, pt.y, g) }))
+    const hits = geoms
+      .map((g) => ({ id: g.route.id, d: distToRoute(pt.x, pt.y, g) }))
       .filter((h) => h.d <= TAP_TOLERANCE_PX * unit)
       .sort((a, b) => a.d - b.d);
     if (hits.length === 0) {
@@ -561,16 +579,17 @@ export function Board({
             {/* biome-ignore lint/a11y/noSvgWithoutTitle lint/a11y/useKeyWithClickEvents: la carte se pilote aussi au clavier via les routes focalisables */}
             <svg
               ref={svgRef}
-              viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+              viewBox={`0 0 ${map.width} ${map.height}`}
               className="board__svg"
               preserveAspectRatio="xMidYMid meet"
               onClick={handleTap}
             >
-              <Background />
+              <Background map={map} lang={lang} />
 
               {/* routes */}
-              {GEOMS.map((g) => {
+              {geoms.map((g) => {
                 const owner = state.owners[g.route.id];
+                const focusable = claimable.has(g.route.id) || hintRoute === g.route.id;
                 return (
                   <RouteView
                     key={g.route.id}
@@ -582,6 +601,11 @@ export function Board({
                     hint={hintRoute === g.route.id}
                     claimAnim={claimAnim}
                     colorBlind={colorBlind}
+                    label={
+                      focusable
+                        ? `${routeName(map, g.route, lang)}, ${t('claim.wagons', { n: g.route.length })}, ${colorName(t, g.route.color)}`
+                        : undefined
+                    }
                     onActivate={activate}
                   />
                 );
@@ -591,13 +615,13 @@ export function Board({
               {plans.length > 0 && (
                 <g className="plans" pointerEvents="none">
                   {plans.map((p) => {
-                    const a = CITY_BY_ID[p.a];
-                    const b = CITY_BY_ID[p.b];
+                    const a = map.cityById[p.a];
+                    const b = map.cityById[p.b];
                     return (
                       <g key={p.id} className={`plan plan--${p.state}`}>
                         {p.state === 'blocked' && <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="plan__direct" />}
                         {p.routeIds.map((rid) => {
-                          const g = GEOMS[rid];
+                          const g = geoms[rid];
                           return <line key={rid} x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} className="plan__route" />;
                         })}
                         <circle cx={a.x} cy={a.y} r={CITY_R + 6} className="plan__city" />
@@ -609,7 +633,7 @@ export function Board({
               )}
 
               {/* villes */}
-              {CITIES.map((c) => {
+              {map.cities.map((c) => {
                 const [dx, dy, anchor] = LABEL_OFFSET[c.label];
                 const hl = highlightCities.includes(c.id);
                 return (
@@ -618,7 +642,7 @@ export function Board({
                     <circle cx={c.x} cy={c.y} r={CITY_R} className="city__dot" />
                     <circle cx={c.x} cy={c.y} r={CITY_R - 3.5} className="city__core" />
                     <text x={c.x + dx} y={c.y + dy} textAnchor={anchor} className="city__label">
-                      {c.name}
+                      {cityName(map, c.id, lang)}
                     </text>
                   </g>
                 );
@@ -626,7 +650,7 @@ export function Board({
 
               {/* célébration d'un billet réalisé : ondes vertes sur ses deux villes */}
               {burstCities.map((id) => {
-                const c = CITY_BY_ID[id];
+                const c = map.cityById[id];
                 return (
                   <g key={`burst-${id}`} pointerEvents="none">
                     {[0, 0.35, 0.7].map((d) => (
@@ -646,17 +670,22 @@ export function Board({
                 );
               })}
               {claimAnim && flashRoute !== null && state.owners[flashRoute] !== undefined && (
-                <ClaimFx key={flashRoute} g={GEOMS[flashRoute]} color={state.players[state.owners[flashRoute]].color} />
+                <ClaimFx key={flashRoute} map={map} g={geoms[flashRoute]} color={state.players[state.owners[flashRoute]].color} />
               )}
             </svg>
           </TransformComponent>
         </TransformWrapper>
       )}
       {chooser && (
-        <div className="route-chooser" style={{ left: chooser.x, top: chooser.y }} role="menu" aria-label="Choisir une route">
-          <span className="route-chooser__title">Quelle route ?</span>
+        <div
+          className="route-chooser"
+          style={{ left: chooser.x, top: chooser.y }}
+          role="menu"
+          aria-label={t('board.chooseRoute')}
+        >
+          <span className="route-chooser__title">{t('board.whichRoute')}</span>
           {chooser.ids.map((id) => {
-            const r = ROUTES[id];
+            const r = map.routeById[id];
             const owner = state.owners[id];
             return (
               <button
@@ -672,7 +701,7 @@ export function Board({
                   className="route-chooser__swatch"
                   style={{ background: owner !== undefined ? PLAYER_FILL[state.players[owner].color] : ROUTE_FILL[r.color] }}
                 />
-                {routeName(r)} · {owner !== undefined ? state.players[owner].name : COLOR_NAMES[r.color]}
+                {routeName(map, r, lang)} · {owner !== undefined ? state.players[owner].name : colorName(t, r.color)}
               </button>
             );
           })}

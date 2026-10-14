@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect } from 'react';
-import { TICKET_BY_ID } from '../../shared/map';
+import { mapOf } from '../../shared/engine';
+import { useT } from '../lib/i18n';
 import type { GameState } from '../../shared/types';
 import { PLAYER_FILL } from '../lib/theme';
 import { TicketCard } from './Tickets';
@@ -17,10 +18,12 @@ export function TicketCelebration({
   state: GameState;
   onDone: () => void;
 }) {
+  const { t } = useT();
+  const map = mapOf(state);
   useEffect(() => {
     if (!item) return;
-    const t = setTimeout(onDone, SHOW_MS);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onDone, SHOW_MS);
+    return () => clearTimeout(timer);
   }, [item, onDone]);
 
   const player = item ? state.players[item.seat] : null;
@@ -38,10 +41,10 @@ export function TicketCelebration({
           role="status"
         >
           <span className="celebrate__title">
-            Billet réalisé ! <b>+{TICKET_BY_ID[item.ticketId].points}</b>
+            {t('celebrate.title')} <b>+{map.ticketById[item.ticketId].points}</b>
           </span>
           <div className="celebrate__ticket">
-            <TicketCard id={item.ticketId} done />
+            <TicketCard map={map} id={item.ticketId} done />
             <motion.span
               className="celebrate__stamp"
               aria-hidden

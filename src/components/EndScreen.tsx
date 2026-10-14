@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
 import { useMemo } from 'react';
+import { mapOf } from '../../shared/engine';
 import type { GameState } from '../../shared/types';
+import { useT } from '../lib/i18n';
 import { PLAYER_FILL } from '../lib/theme';
 import { TicketCard } from './Tickets';
 
@@ -45,6 +47,8 @@ interface Props {
 }
 
 export function EndScreen({ state, onClose, onHome, onNewGame, onReplay }: Props) {
+  const { t } = useT();
+  const map = mapOf(state);
   const results = [...(state.results ?? [])].sort((a, b) => a.rank - b.rank);
   const winner = results[0];
   return (
@@ -57,8 +61,8 @@ export function EndScreen({ state, onClose, onHome, onNewGame, onReplay }: Props
         transition={{ type: 'spring', stiffness: 220, damping: 22, delay: 0.15 }}
       >
         <div className="end__trophy">🏆</div>
-        <h2 className="end__title">{state.players[winner.seat].name} remporte la partie !</h2>
-        <p className="end__subtitle">{winner.total} points</p>
+        <h2 className="end__title">{t('end.wins', { name: state.players[winner.seat].name })}</h2>
+        <p className="end__subtitle">{t('end.points', { n: winner.total })}</p>
 
         <div className="end__table">
           {results.map((r, i) => {
@@ -79,22 +83,22 @@ export function EndScreen({ state, onClose, onHome, onNewGame, onReplay }: Props
                   </div>
                   <div className="end__breakdown">
                     <span>
-                      Routes <b>{r.routePoints}</b>
+                      {t('end.routes')} <b>{r.routePoints}</b>
                     </span>
                     <span>
-                      Destinations{' '}
+                      {t('end.tickets')}{' '}
                       <b className={r.ticketPoints < 0 ? 'neg' : ''}>
                         {r.ticketPoints >= 0 ? `+${r.ticketPoints}` : r.ticketPoints}
                       </b>
                     </span>
                     <span>
-                      Plus long trajet <b>{r.longest}</b>
+                      {t('end.longest')} <b>{r.longest}</b>
                       {r.longestBonus > 0 && <em> +{r.longestBonus} 🏅</em>}
                     </span>
                   </div>
                   <div className="end__tickets">
-                    {r.tickets.map((t) => (
-                      <TicketCard key={t.id} id={t.id} done={t.done} points={t.points} />
+                    {r.tickets.map((ticket) => (
+                      <TicketCard key={ticket.id} map={map} id={ticket.id} done={ticket.done} points={ticket.points} />
                     ))}
                   </div>
                 </div>
@@ -107,17 +111,17 @@ export function EndScreen({ state, onClose, onHome, onNewGame, onReplay }: Props
         <div className="end__actions">
           {onReplay && (
             <button type="button" className="btn" onClick={onReplay}>
-              🎆 Revoir le final
+              {t('end.replay')}
             </button>
           )}
           <button type="button" className="btn" onClick={onClose}>
-            Voir la carte
+            {t('end.viewMap')}
           </button>
           <button type="button" className="btn" onClick={onHome}>
-            Accueil
+            {t('end.home')}
           </button>
           <button type="button" className="btn btn--primary" onClick={onNewGame}>
-            Rejouer
+            {t('end.again')}
           </button>
         </div>
       </motion.div>

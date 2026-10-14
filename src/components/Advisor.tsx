@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import type { Advice } from '../../shared/advisor';
+import { useT } from '../lib/i18n';
 import { Sheet } from './Tickets';
 
 interface Props {
@@ -11,8 +12,9 @@ interface Props {
 
 /** Fenêtre du chef de gare : le conseil, ses raisons et l'état des billets. */
 export function AdvisorSheet({ advice, busy, onFollow, onClose }: Props) {
+  const { t } = useT();
   return (
-    <Sheet title="Le chef de gare" onClose={onClose}>
+    <Sheet title={t('advisor.title')} onClose={onClose}>
       <div className="advisor">
         <div className="advisor__speech">
           <motion.span
@@ -49,15 +51,15 @@ export function AdvisorSheet({ advice, busy, onFollow, onClose }: Props) {
 
         {advice.tickets.length > 0 && (
           <div className="advisor__tickets">
-            <h3>Vos destinations</h3>
+            <h3>{t('tickets.title')}</h3>
             <ul>
-              {advice.tickets.map((t) => (
-                <li key={t.id} className={`advisor__ticket advisor__ticket--${t.state}`}>
-                  <span>{t.label}</span>
+              {advice.tickets.map((ticket) => (
+                <li key={ticket.id} className={`advisor__ticket advisor__ticket--${ticket.state}`}>
+                  <span>{ticket.label}</span>
                   <span>
-                    {t.state === 'done' && `✓ réalisée (+${t.points})`}
-                    {t.state === 'open' && `encore ~${t.missing} wagon${t.missing! > 1 ? 's' : ''}`}
-                    {t.state === 'blocked' && `✗ bloquée (−${t.points})`}
+                    {ticket.state === 'done' && t('advisor.done', { pts: ticket.points })}
+                    {ticket.state === 'open' && t('advisor.open', { n: ticket.missing ?? 0 })}
+                    {ticket.state === 'blocked' && t('advisor.blocked', { pts: ticket.points })}
                   </span>
                 </li>
               ))}
@@ -65,13 +67,13 @@ export function AdvisorSheet({ advice, busy, onFollow, onClose }: Props) {
           </div>
         )}
 
-        <p className="advisor__note">Le conseil apparaît aussi en surbrillance sur la carte. Libre à vous de le suivre !</p>
+        <p className="advisor__note">{t('advisor.note')}</p>
         <div className="advisor__actions">
           <button type="button" className="btn" onClick={onClose}>
-            Je décide
+            {t('advisor.decide')}
           </button>
           <button type="button" className="btn btn--primary" onClick={onFollow} disabled={busy}>
-            Suivre le conseil
+            {t('advisor.follow')}
           </button>
         </div>
       </div>

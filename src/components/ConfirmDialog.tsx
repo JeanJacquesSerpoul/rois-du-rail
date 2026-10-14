@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { useEffect, useRef } from 'react';
+import { useT } from '../lib/i18n';
 import { useFocusTrap } from '../lib/useFocusTrap';
 
 interface Props {
@@ -14,17 +15,9 @@ interface Props {
 }
 
 /** Boîte de confirmation aux couleurs du jeu, en remplacement de window.confirm. */
-export function ConfirmDialog({
-  title,
-  message,
-  icon = '🚂',
-  confirmLabel = 'Confirmer',
-  cancelLabel = 'Annuler',
-  busy,
-  onConfirm,
-  onCancel,
-}: Props) {
+export function ConfirmDialog({ title, message, icon = '🚂', confirmLabel, cancelLabel, busy, onConfirm, onCancel }: Props) {
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const { t } = useT();
 
   const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -67,10 +60,10 @@ export function ConfirmDialog({
         )}
         <div className="dialog__actions">
           <button ref={cancelRef} type="button" className="btn" onClick={onCancel} disabled={busy}>
-            {cancelLabel}
+            {cancelLabel ?? t('common.cancel')}
           </button>
           <button type="button" className="btn btn--primary" onClick={onConfirm} disabled={busy}>
-            {confirmLabel}
+            {confirmLabel ?? t('common.confirm')}
           </button>
         </div>
       </motion.div>

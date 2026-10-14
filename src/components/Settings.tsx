@@ -3,20 +3,17 @@ import { useEffect, useState } from 'react';
 import { music } from '../lib/music';
 import { setPref, usePref, type BotSpeed, type MapTheme } from '../lib/prefs';
 import { playSfx } from '../lib/sfx';
+import { useT } from '../lib/i18n';
+import type { Lang } from '../../shared/i18n';
 import { Sheet } from './Tickets';
 
-const THEMES: [MapTheme, string][] = [
-  ['auto', 'Selon l’heure'],
-  ['day', 'Jour'],
-  ['dusk', 'Crépuscule'],
+const THEMES: MapTheme[] = ['auto', 'day', 'dusk'];
+const LANGS: [Lang, string][] = [
+  ['fr', 'Français'],
+  ['en', 'English'],
 ];
 
-const SPEEDS: [BotSpeed, string][] = [
-  ['slow', 'Lente'],
-  ['normal', 'Normale'],
-  ['fast', 'Rapide'],
-  ['instant', 'Éclair'],
-];
+const SPEEDS: BotSpeed[] = ['slow', 'normal', 'fast', 'instant'];
 
 function Switch({
   on,
@@ -70,14 +67,31 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
   const colorBlind = usePref('colorBlind');
   const sfx = usePref('sfx');
   const mapTheme = usePref('mapTheme');
+  const lang = usePref('lang');
+  const { t } = useT();
 
   return (
-    <Sheet title="Réglages" subtitle="Enregistrés sur cet appareil." onClose={onClose}>
+    <Sheet title={t('settings.title')} subtitle={t('settings.subtitle')} onClose={onClose}>
       <div className="settings">
-        <Row icon="🎵" title="Musique d'ambiance">
+        <div className="settings__row settings__row--block">
+          <span className="settings__icon" aria-hidden>
+            🌍
+          </span>
+          <span className="settings__text">
+            <b>{t('settings.language')}</b>
+          </span>
+          <fieldset className="segmented segmented--sm settings__speeds" aria-label={t('settings.language')}>
+            {LANGS.map(([value, label]) => (
+              <button key={value} type="button" className={lang === value ? 'is-on' : ''} onClick={() => setPref('lang', value)}>
+                {label}
+              </button>
+            ))}
+          </fieldset>
+        </div>
+        <Row icon="🎵" title={t('settings.music')}>
           <Switch
             on={musicOn}
-            label="Musique d'ambiance"
+            label={t('settings.music')}
             music
             onChange={(v) => {
               if (v) void music.start();
@@ -86,49 +100,45 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
             }}
           />
         </Row>
-        <Row icon="🔔" title="Effets sonores" hint="Cartes, sifflet à la pose, carillon des billets réalisés.">
+        <Row icon="🔔" title={t('settings.sfx')} hint={t('settings.sfxHint')}>
           <Switch
             on={sfx}
-            label="Effets sonores"
+            label={t('settings.sfx')}
             onChange={(v) => {
               setPref('sfx', v);
               if (v) playSfx('chime');
             }}
           />
         </Row>
-        <Row icon="🎞️" title="Animation de pose" hint="Une locomotive pose les wagons de chaque route prise.">
-          <Switch on={claimAnim} label="Animation de pose des wagons" onChange={(v) => setPref('claimAnim', v)} />
+        <Row icon="🎞️" title={t('settings.claimAnim')} hint={t('settings.claimAnimHint')}>
+          <Switch on={claimAnim} label={t('settings.claimAnim')} onChange={(v) => setPref('claimAnim', v)} />
         </Row>
-        <Row
-          icon="✨"
-          title="Routes jouables en évidence"
-          hint="Pendant votre tour, les routes que vous pouvez payer scintillent."
-        >
-          <Switch on={showClaimable} label="Routes jouables en évidence" onChange={(v) => setPref('showClaimable', v)} />
+        <Row icon="✨" title={t('settings.claimable')} hint={t('settings.claimableHint')}>
+          <Switch on={showClaimable} label={t('settings.claimable')} onChange={(v) => setPref('showClaimable', v)} />
         </Row>
-        <Row icon="👁️" title="Mode daltonien" hint="Un symbole sur chaque couleur de carte et de route (♥ ◆ ★ ♣ ● ▲ ■ ○).">
-          <Switch on={colorBlind} label="Mode daltonien" onChange={(v) => setPref('colorBlind', v)} />
+        <Row icon="👁️" title={t('settings.colorBlind')} hint={t('settings.colorBlindHint')}>
+          <Switch on={colorBlind} label={t('settings.colorBlind')} onChange={(v) => setPref('colorBlind', v)} />
         </Row>
-        <Row icon="🔊" title="Voix off de la présentation">
-          <Switch on={introVoice} label="Voix off de la présentation" onChange={(v) => setPref('introVoice', v)} />
+        <Row icon="🔊" title={t('settings.voice')}>
+          <Switch on={introVoice} label={t('settings.voice')} onChange={(v) => setPref('introVoice', v)} />
         </Row>
         <div className="settings__row settings__row--block">
           <span className="settings__icon" aria-hidden>
             🌅
           </span>
           <span className="settings__text">
-            <b>Ambiance de la carte</b>
-            <small>Le crépuscule s’installe le soir en mode automatique.</small>
+            <b>{t('settings.theme')}</b>
+            <small>{t('settings.themeHint')}</small>
           </span>
-          <fieldset className="segmented segmented--sm settings__speeds" aria-label="Ambiance de la carte">
-            {THEMES.map(([value, label]) => (
+          <fieldset className="segmented segmented--sm settings__speeds" aria-label={t('settings.theme')}>
+            {THEMES.map((value) => (
               <button
                 key={value}
                 type="button"
                 className={mapTheme === value ? 'is-on' : ''}
                 onClick={() => setPref('mapTheme', value)}
               >
-                {label}
+                {t(`settings.theme.${value}`)}
               </button>
             ))}
           </fieldset>
@@ -138,18 +148,18 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
             🤖
           </span>
           <span className="settings__text">
-            <b>Vitesse des ordinateurs</b>
-            <small>Temps de pause entre leurs actions.</small>
+            <b>{t('settings.speed')}</b>
+            <small>{t('settings.speedHint')}</small>
           </span>
-          <fieldset className="segmented segmented--sm settings__speeds" aria-label="Vitesse des ordinateurs">
-            {SPEEDS.map(([value, label]) => (
+          <fieldset className="segmented segmented--sm settings__speeds" aria-label={t('settings.speed')}>
+            {SPEEDS.map((value) => (
               <button
                 key={value}
                 type="button"
                 className={botSpeed === value ? 'is-on' : ''}
                 onClick={() => setPref('botSpeed', value)}
               >
-                {label}
+                {t(`settings.speed.${value}`)}
               </button>
             ))}
           </fieldset>
@@ -162,14 +172,15 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
 /** Bouton ⚙️ qui ouvre les réglages. */
 export function SettingsButton() {
   const [open, setOpen] = useState(false);
+  const { t } = useT();
   return (
     <>
       <button
         type="button"
         className="music-toggle settings-btn"
         onClick={() => setOpen(true)}
-        aria-label="Réglages"
-        title="Réglages"
+        aria-label={t('settings.title')}
+        title={t('settings.title')}
       >
         <span aria-hidden>⚙️</span>
       </button>

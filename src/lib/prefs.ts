@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { type Lang, detectLang } from '../../shared/i18n';
 
 /**
  * Préférences de l'appareil (localStorage), partagées en direct entre les écrans.
@@ -16,6 +17,7 @@ export interface Prefs {
   colorBlind: boolean;
   sfx: boolean;
   mapTheme: MapTheme;
+  lang: Lang;
 }
 
 const KEYS: Record<keyof Prefs, string> = {
@@ -26,6 +28,7 @@ const KEYS: Record<keyof Prefs, string> = {
   colorBlind: 'rdr.colorBlind',
   sfx: 'rdr.sfx',
   mapTheme: 'rdr.mapTheme',
+  lang: 'rdr.lang',
 };
 
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -38,6 +41,7 @@ const DEFAULTS = (): Prefs => ({
   colorBlind: false,
   sfx: true,
   mapTheme: 'auto',
+  lang: detectLang(),
 });
 
 const BOT_SPEEDS: BotSpeed[] = ['slow', 'normal', 'fast', 'instant'];
@@ -56,6 +60,8 @@ function load(): Prefs {
     flag('sfx');
     const theme = localStorage.getItem(KEYS.mapTheme) as MapTheme | null;
     if (theme && ['auto', 'day', 'dusk'].includes(theme)) prefs.mapTheme = theme;
+    const lang = localStorage.getItem(KEYS.lang);
+    if (lang === 'fr' || lang === 'en') prefs.lang = lang;
     const speed = localStorage.getItem(KEYS.botSpeed) as BotSpeed | null;
     if (speed && BOT_SPEEDS.includes(speed)) prefs.botSpeed = speed;
   } catch {

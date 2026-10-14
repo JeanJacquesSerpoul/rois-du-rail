@@ -6,6 +6,8 @@ export type PlayerColor = 'crimson' | 'navy' | 'forest' | 'amber' | 'violet';
 export interface City {
   id: string;
   name: string;
+  /** Nom anglais quand il diffère (Londres → London). */
+  nameEn?: string;
   x: number;
   y: number;
   /** Position de l'étiquette par rapport au point. */
@@ -88,6 +90,8 @@ export interface PlayerResult {
 
 export interface GameState {
   version: 1;
+  /** Carte jouée (absente dans les parties antérieures aux cartes multiples : France). */
+  mapId?: 'france' | 'bretagne' | 'europe';
   rng: number;
   phase: 'setup' | 'playing' | 'finished';
   players: Player[];

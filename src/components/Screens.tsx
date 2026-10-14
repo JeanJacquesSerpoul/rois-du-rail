@@ -1,10 +1,13 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
-import { LONGEST_BONUS, ROUTE_POINTS, WAGONS_PER_PLAYER } from '../../shared/engine';
-import { BOT_LEVELS, BOT_LEVEL_NAMES } from '../../shared/bot';
+import { BOT_LEVELS } from '../../shared/bot';
+import { LONGEST_BONUS, ROUTE_POINTS } from '../../shared/engine';
+import { MAP_IDS, MAPS, type MapId, getMap } from '../../shared/maps';
 import type { BotLevel, PlayerColor, PlayerConfig } from '../../shared/types';
 import { OFFLINE, api, type GameSummary, type LeaderRow } from '../lib/api';
-import { PLAYER_COLOR_NAMES, PLAYER_FILL } from '../lib/theme';
+import { errorText, useT } from '../lib/i18n';
+import { setPref, usePref } from '../lib/prefs';
+import { PLAYER_FILL } from '../lib/theme';
 import { ConfirmDialog } from './ConfirmDialog';
 import { SettingsButton } from './Settings';
 import { Sheet } from './Tickets';
@@ -20,6 +23,23 @@ function storage(key: string, fallback: string) {
   } catch {
     return fallback;
   }
+}
+
+/** Bascule rapide français / anglais. */
+function LangSwitch() {
+  const lang = usePref('lang');
+  const { t } = useT();
+  return (
+    <button
+      type="button"
+      className="music-toggle lang-toggle"
+      onClick={() => setPref('lang', lang === 'fr' ? 'en' : 'fr')}
+      aria-label={t('settings.language')}
+      title={t('settings.language')}
+    >
+      {lang === 'fr' ? 'EN' : 'FR'}
+    </button>
+  );
 }
 
 function HeroTrain() {
@@ -57,6 +77,7 @@ export function Home({
   onIntro: () => void;
   onTutorial: () => Promise<void>;
 }) {
+  const { t } = useT();
   const [games, setGames] = useState<GameSummary[] | null>(null);
   const [leaders, setLeaders] = useState<LeaderRow[] | null>(null);
   const [sheet, setSheet] = useState<'rules' | 'stats' | null>(null);
@@ -68,7 +89,7 @@ export function Home({
     api
       .listGames()
       .then(setGames)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(errorText(e, t)));
   // biome-ignore lint/correctness/useExhaustiveDependencies: chargement unique à l'ouverture de l'accueil
   useEffect(() => {
     refresh();
@@ -81,11 +102,12 @@ export function Home({
     <div className="home">
       <div className="home__sky" />
       <div className="home__toggles">
+        <LangSwitch />
         <SettingsButton />
       </div>
       <header className="home__hero">
         <motion.p className="home__kicker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          Compagnie des chemins de fer de France
+          {t('home.kicker')}
         </motion.p>
         <motion.h1
           className="home__title"
@@ -96,7 +118,7 @@ export function Home({
           Rois <span>du</span> Rail
         </motion.h1>
         <motion.p className="home__tagline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-          Reliez les villes, complétez vos destinations, bâtissez le plus grand réseau du pays.
+          {t('home.tagline')}
         </motion.p>
         <HeroTrain />
       </header>
@@ -110,7 +132,7 @@ export function Home({
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
           >
-            ▶ Reprendre la partie n°{ongoing[0].id}
+            {t('home.resume', { id: ongoing[0].id })}
           </motion.button>
         )}
         <motion.button
@@ -120,19 +142,19 @@ export function Home({
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
         >
-          🚂 Nouvelle partie
+          {t('home.newGame')}
         </motion.button>
         <div className="home__row">
           <button type="button" className="btn btn--ghost" onClick={onIntro}>
-            🎬 Vidéo
+            {t('home.video')}
           </button>
-          <button type="button" className="btn btn--ghost" onClick={() => onTutorial().catch((e) => setError(e.message))}>
-            🎓 Partie guidée
+          <button type="button" className="btn btn--ghost" onClick={() => onTutorial().catch((e) => setError(errorText(e, t)))}>
+            {t('home.tutorial')}
           </button>
         </div>
         <div className="home__row">
           <button type="button" className="btn" onClick={() => setSheet('rules')}>
-            📜 Règles
+            {t('home.rules')}
           </button>
           <button
             type="button"
@@ -142,24 +164,19 @@ export function Home({
               api
                 .stats()
                 .then(setLeaders)
-                .catch((e) => setError(e.message));
+                .catch((e) => setError(errorText(e, t)));
             }}
           >
-            🏆 Classement
+            {t('home.ranking')}
           </button>
         </div>
 
-        {error && <p className="home__error">Serveur injoignable : {error}</p>}
-        {OFFLINE && (
-          <p className="home__note">
-            Version de démonstration : les parties sont enregistrées dans ce navigateur. La version complète utilise un serveur
-            avec base SQLite.
-          </p>
-        )}
+        {error && <p className="home__error">{t('home.serverError', { error })}</p>}
+        {OFFLINE && <p className="home__note">{t('home.offlineNote')}</p>}
 
         {ongoing.length > 0 && (
           <section className="home__section">
-            <h2>Parties en cours</h2>
+            <h2>{t('home.ongoing')}</h2>
             <ul className="game-list">
               {ongoing.map((g) => (
                 <GameRow key={g.id} game={g} onOpen={onOpen} onDelete={() => setToDelete(g)} />
@@ -169,7 +186,7 @@ export function Home({
         )}
         {finished.length > 0 && (
           <section className="home__section">
-            <h2>Dernières parties</h2>
+            <h2>{t('home.finished')}</h2>
             <ul className="game-list">
               {finished.map((g) => (
                 <GameRow key={g.id} game={g} onOpen={onOpen} onDelete={() => setToDelete(g)} />
@@ -186,13 +203,9 @@ export function Home({
           <ConfirmDialog
             key="confirm-delete"
             icon="🗑"
-            title={`Supprimer la partie n°${toDelete.id} ?`}
-            message={
-              toDelete.status === 'finished'
-                ? 'Son résultat disparaîtra aussi du classement.'
-                : 'La partie en cours sera définitivement perdue.'
-            }
-            confirmLabel="Supprimer"
+            title={t('home.deleteTitle', { id: toDelete.id })}
+            message={toDelete.status === 'finished' ? t('home.deleteFinished') : t('home.deleteOngoing')}
+            confirmLabel={t('common.delete')}
             busy={deleting}
             onCancel={() => setToDelete(null)}
             onConfirm={() => {
@@ -200,7 +213,7 @@ export function Home({
               api
                 .deleteGame(toDelete.id)
                 .then(refresh)
-                .catch((e) => setError(e.message))
+                .catch((e) => setError(errorText(e, t)))
                 .finally(() => {
                   setDeleting(false);
                   setToDelete(null);
@@ -214,8 +227,10 @@ export function Home({
 }
 
 function GameRow({ game, onOpen, onDelete }: { game: GameSummary; onOpen: (id: number) => void; onDelete: () => void }) {
+  const { t, lang } = useT();
   const date = new Date(`${game.updated_at.replace(' ', 'T')}Z`);
   const winner = game.players.find((p) => p.rank === 1);
+  const map = getMap(game.map_id);
   return (
     <li className="game-row">
       <button type="button" className="game-row__main" onClick={() => onOpen(game.id)}>
@@ -232,29 +247,77 @@ function GameRow({ game, onOpen, onDelete }: { game: GameSummary; onOpen: (id: n
           ))}
         </span>
         <span className="game-row__text">
-          <b>Partie n°{game.id}</b>
+          <b>
+            {t('home.game', { id: game.id })} · {map.name[lang]}
+          </b>
           <small>
-            {game.status === 'finished' && winner ? `Victoire de ${winner.name} (${winner.score} pts) · ` : ''}
-            {date.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+            {game.status === 'finished' && winner ? `${t('home.winner', { name: winner.name, pts: winner.score ?? 0 })} · ` : ''}
+            {date.toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}
           </small>
         </span>
-        <span className="game-row__go">{game.status === 'finished' ? 'Voir' : 'Reprendre'} ›</span>
+        <span className="game-row__go">{game.status === 'finished' ? t('home.view') : t('home.resumeShort')} ›</span>
       </button>
-      <button type="button" className="icon-btn" aria-label="Supprimer la partie" onClick={onDelete}>
+      <button type="button" className="icon-btn" aria-label={t('home.deleteLabel')} onClick={onDelete}>
         🗑
       </button>
     </li>
   );
 }
 
-export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) => Promise<void>; onBack: () => void }) {
+/** Aperçu d'une carte pour le choix de la partie. */
+function MapPreview({ id }: { id: MapId }) {
+  const map = MAPS[id];
+  return (
+    <svg viewBox={`0 0 ${map.width} ${map.height}`} className="map-choice__svg" aria-hidden>
+      <rect width={map.width} height={map.height} fill="#b9d3d3" />
+      {map.neighborPaths.map((d, i) => (
+        <path key={`n${i}`} d={d} fill="#e2d6b8" />
+      ))}
+      {map.landPaths.map((d, i) => (
+        <path key={`l${i}`} d={d} fill="#f6ebcf" stroke="#7a5c2e" strokeWidth={map.width / 250} />
+      ))}
+      {map.routes.map((r) => {
+        const a = map.cityById[r.a];
+        const b = map.cityById[r.b];
+        return (
+          <line
+            key={r.id}
+            x1={a.x}
+            y1={a.y}
+            x2={b.x}
+            y2={b.y}
+            stroke="#a8122a"
+            strokeOpacity=".55"
+            strokeWidth={map.width / 300}
+          />
+        );
+      })}
+      {map.cities.map((c) => (
+        <circle key={c.id} cx={c.x} cy={c.y} r={map.width / 160} fill="#1b2a41" />
+      ))}
+    </svg>
+  );
+}
+
+export function Setup({
+  onStart,
+  onBack,
+}: {
+  onStart: (players: PlayerConfig[], mapId: MapId) => Promise<void>;
+  onBack: () => void;
+}) {
+  const { t, lang } = useT();
   // le dernier niveau choisi sert de niveau par défaut pour les nouveaux ordinateurs
   const [defaultLevel] = useState<BotLevel>(() => {
     const saved = storage('rdr.level', 'normal') as BotLevel;
     return BOT_LEVELS.includes(saved) ? saved : 'normal';
   });
+  const [mapId, setMapId] = useState<MapId>(() => {
+    const saved = storage('rdr.map', 'france') as MapId;
+    return MAP_IDS.includes(saved) ? saved : 'france';
+  });
   const [players, setPlayers] = useState<PlayerConfig[]>(() => [
-    { name: storage('rdr.name', 'Joueur 1'), isBot: false, color: 'crimson', level: defaultLevel },
+    { name: storage('rdr.name', t('setup.defaultName', { n: 1 })), isBot: false, color: 'crimson', level: defaultLevel },
     { name: BOT_NAMES[0], isBot: true, color: 'navy', level: defaultLevel },
     { name: BOT_NAMES[1], isBot: true, color: 'forest', level: defaultLevel },
   ]);
@@ -267,7 +330,12 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
       const next = [...ps];
       while (next.length < n) {
         const color = ALL_COLORS.find((c) => !next.some((p) => p.color === c))!;
-        next.push({ name: BOT_NAMES[next.length - 1] ?? `Joueur ${next.length + 1}`, isBot: true, color, level: defaultLevel });
+        next.push({
+          name: BOT_NAMES[next.length - 1] ?? t('setup.defaultName', { n: next.length + 1 }),
+          isBot: true,
+          color,
+          level: defaultLevel,
+        });
       }
       return next;
     });
@@ -292,12 +360,13 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
       try {
         if (firstHuman) localStorage.setItem('rdr.name', firstHuman.name);
         if (firstBot?.level) localStorage.setItem('rdr.level', firstBot.level);
+        localStorage.setItem('rdr.map', mapId);
       } catch {
         /* stockage indisponible */
       }
-      await onStart(players);
+      await onStart(players, mapId);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
       setBusy(false);
     }
   };
@@ -305,14 +374,34 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
   return (
     <div className="setup">
       <header className="setup__head">
-        <button type="button" className="icon-btn icon-btn--light" onClick={onBack} aria-label="Retour">
+        <button type="button" className="icon-btn icon-btn--light" onClick={onBack} aria-label={t('common.back')}>
           ←
         </button>
-        <h1>Nouvelle partie</h1>
+        <h1>{t('setup.title')}</h1>
       </header>
       <div className="setup__body">
+        <fieldset className="map-choices" aria-label={t('setup.map')}>
+          <legend className="setup__label">{t('setup.map')}</legend>
+          {MAP_IDS.map((id) => {
+            const map = MAPS[id];
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`map-choice ${mapId === id ? 'is-on' : ''}`}
+                aria-pressed={mapId === id}
+                onClick={() => setMapId(id)}
+              >
+                <MapPreview id={id} />
+                <span className="map-choice__name">{map.name[lang]}</span>
+                <span className="map-choice__desc">{map.description[lang]}</span>
+                <span className="map-choice__meta">{t('setup.mapMeta', { n: map.wagons, routes: map.routes.length })}</span>
+              </button>
+            );
+          })}
+        </fieldset>
         <div className="setup__count">
-          <span>Joueurs</span>
+          <span>{t('setup.players')}</span>
           <div className="segmented">
             {[2, 3, 4, 5].map((n) => (
               <button key={n} type="button" className={players.length === n ? 'is-on' : ''} onClick={() => setCount(n)}>
@@ -336,7 +425,7 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
                   type="button"
                   className="setup-player__color"
                   onClick={() => cycleColor(i)}
-                  aria-label={`Couleur : ${PLAYER_COLOR_NAMES[p.color]} (toucher pour changer)`}
+                  aria-label={t('setup.colorLabel', { color: t(`playerColor.${p.color}`) })}
                 >
                   <WagonIcon color="#fff" />
                 </button>
@@ -345,19 +434,19 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
                   value={p.name}
                   maxLength={20}
                   onChange={(e) => update(i, { name: e.target.value })}
-                  aria-label={`Nom du joueur ${i + 1}`}
+                  aria-label={t('setup.nameLabel', { n: i + 1 })}
                 />
                 <div className="segmented segmented--sm">
                   <button type="button" className={!p.isBot ? 'is-on' : ''} onClick={() => update(i, { isBot: false })}>
-                    👤 Humain
+                    {t('setup.human')}
                   </button>
                   <button type="button" className={p.isBot ? 'is-on' : ''} onClick={() => update(i, { isBot: true })}>
-                    🤖 Ordi
+                    {t('setup.bot')}
                   </button>
                 </div>
                 {p.isBot && (
-                  <fieldset className="setup-player__level" aria-label={`Niveau de ${p.name}`}>
-                    <span>Niveau</span>
+                  <fieldset className="setup-player__level" aria-label={t('setup.levelOf', { name: p.name })}>
+                    <span>{t('setup.level')}</span>
                     <div className="segmented segmented--sm">
                       {BOT_LEVELS.map((l) => (
                         <button
@@ -366,7 +455,7 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
                           className={(p.level ?? 'normal') === l ? 'is-on' : ''}
                           onClick={() => update(i, { level: l })}
                         >
-                          {LEVEL_ICONS[l]} {BOT_LEVEL_NAMES[l]}
+                          {LEVEL_ICONS[l]} {t(`level.${l}`)}
                         </button>
                       ))}
                     </div>
@@ -377,12 +466,12 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
           </AnimatePresence>
         </ul>
         <p className="setup__note">
-          Plusieurs humains ? Jouez à tour de rôle sur le même appareil : la main de chacun reste cachée entre les tours.
-          {players.length < 4 && ' À moins de 4 joueurs, une seule voie des routes doubles est utilisable.'}
+          {t('setup.hotseat')}
+          {players.length < 4 && ` ${t('setup.doubles')}`}
         </p>
         {error && <p className="home__error">{error}</p>}
         <button type="button" className="btn btn--primary btn--xl" disabled={busy} onClick={start}>
-          {busy ? 'Mise sur les rails…' : 'En voiture !'}
+          {busy ? t('setup.starting') : t('setup.start')}
         </button>
       </div>
     </div>
@@ -390,75 +479,63 @@ export function Setup({ onStart, onBack }: { onStart: (players: PlayerConfig[]) 
 }
 
 function Rules({ onClose }: { onClose: () => void }) {
+  const { t } = useT();
   return (
-    <Sheet title="Règles du jeu" onClose={onClose}>
+    <Sheet title={t('rules.title')} onClose={onClose}>
       <div className="rules">
-        <p>
-          Chaque joueur dispose de <b>{WAGONS_PER_PLAYER} wagons</b>. À votre tour, faites <b>une seule</b> de ces trois actions :
-        </p>
-        <h3>1. Piocher des cartes Wagon</h3>
-        <p>
-          Prenez 2 cartes, visibles ou dans la pioche. Une <b>locomotive</b> visible compte pour les deux cartes ; elle ne peut
-          pas être prise en seconde carte. Trois locomotives visibles ? Les 5 cartes sont remplacées.
-        </p>
+        <p>{t('rules.intro')}</p>
+        <h3>{t('rules.drawTitle')}</h3>
+        <p>{t('rules.draw')}</p>
         <div className="rules__cards">
           <TrainCard color="red" size="sm" />
           <TrainCard color="blue" size="sm" />
           <TrainCard color="loco" size="sm" />
         </div>
-        <h3>2. Prendre une route</h3>
-        <p>
-          Défaussez autant de cartes de la couleur de la route que sa longueur. Les routes <b>grises</b> acceptent n'importe
-          quelle couleur (une seule à la fois). Les locomotives remplacent n'importe quelle couleur.
-        </p>
+        <h3>{t('rules.claimTitle')}</h3>
+        <p>{t('rules.claim')}</p>
         <table className="rules__table">
           <tbody>
             <tr>
-              <th>Longueur</th>
+              <th>{t('rules.length')}</th>
               {Object.keys(ROUTE_POINTS).map((k) => (
                 <td key={k}>{k}</td>
               ))}
             </tr>
             <tr>
-              <th>Points</th>
+              <th>{t('rules.points')}</th>
               {Object.values(ROUTE_POINTS).map((v) => (
                 <td key={v}>{v}</td>
               ))}
             </tr>
           </tbody>
         </table>
-        <h3>3. Piocher des destinations</h3>
-        <p>
-          Tirez 3 billets et gardez-en au moins 1. En fin de partie, un billet réalisé (villes reliées par vos routes) rapporte
-          ses points, sinon il les fait perdre.
-        </p>
-        <h3>Fin de partie</h3>
-        <p>
-          Quand un joueur n'a plus que 2 wagons ou moins, chacun joue un dernier tour. Le plus long trajet continu rapporte un
-          bonus de <b>{LONGEST_BONUS} points</b>.
-        </p>
+        <h3>{t('rules.ticketsTitle')}</h3>
+        <p>{t('rules.tickets')}</p>
+        <h3>{t('rules.endTitle')}</h3>
+        <p>{t('rules.end', { n: LONGEST_BONUS })}</p>
       </div>
     </Sheet>
   );
 }
 
 function Stats({ rows, onClose }: { rows: LeaderRow[] | null; onClose: () => void }) {
+  const { t } = useT();
   return (
-    <Sheet title="Classement" subtitle="Calculé sur toutes les parties terminées" onClose={onClose}>
+    <Sheet title={t('stats.title')} subtitle={t('stats.subtitle')} onClose={onClose}>
       {!rows ? (
-        <p>Chargement…</p>
+        <p>{t('common.loading')}</p>
       ) : rows.length === 0 ? (
-        <p className="stats__empty">Aucune partie terminée pour l'instant. À vous de jouer !</p>
+        <p className="stats__empty">{t('stats.empty')}</p>
       ) : (
         <table className="stats">
           <thead>
             <tr>
-              <th>Joueur</th>
-              <th>Parties</th>
-              <th>Victoires</th>
-              <th>Moy.</th>
-              <th>Record</th>
-              <th>Billets</th>
+              <th>{t('stats.player')}</th>
+              <th>{t('stats.games')}</th>
+              <th>{t('stats.wins')}</th>
+              <th>{t('stats.avg')}</th>
+              <th>{t('stats.best')}</th>
+              <th>{t('stats.tickets')}</th>
             </tr>
           </thead>
           <tbody>

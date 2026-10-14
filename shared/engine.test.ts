@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame, computePayment, longestPath } from './engine';
 import { botAction } from './bot';
-import { ROUTES, ROUTE_BY_ID } from './map';
+import { MAPS } from './maps';
+
+const ROUTES = MAPS.france.routes;
+const ROUTE_BY_ID = MAPS.france.routeById;
 import type { PlayerColor } from './types';
 
 const colors: PlayerColor[] = ['crimson', 'navy', 'forest', 'amber', 'violet'];
@@ -104,5 +107,72 @@ describe('chef de gare', () => {
       }
       expect(s.phase).toBe('finished');
     }
+  });
+});
+
+describe('cartes', () => {
+  for (const id of ['bretagne', 'europe'] as const) {
+    it(`simule des parties complètes sur la carte ${id}`, () => {
+      for (let seed = 1; seed <= 8; seed++) {
+        let s = createGame(
+          colors.slice(0, 3).map((color, i) => ({ name: `B${i}`, isBot: true, color, level: 'hard' as const })),
+          seed * 613,
+          id,
+        );
+        expect(s.mapId).toBe(id);
+        expect(s.players[0].wagons).toBe(MAPS[id].wagons);
+        let steps = 0;
+        while (s.phase !== 'finished' && steps++ < 5000) s = applyAction(s, s.current, botAction(s));
+        expect(s.phase).toBe('finished');
+        // toutes les routes posées appartiennent bien à la carte jouée
+        for (const rid of Object.keys(s.owners)) expect(MAPS[id].routeById[Number(rid)]).toBeDefined();
+      }
+    });
+  }
+
+  it('garde la France pour les anciennes parties sans carte', () => {
+    const s = createGame(players(2), 7);
+    const old = { ...s, mapId: undefined };
+    expect(applyAction(old, 0, { type: 'keepTickets', keep: s.turn?.kind === 'tickets' ? s.turn.offered : [] }).phase).toBe(
+      'setup',
+    );
+  });
+});
+
+describe('traductions', () => {
+  it('choisit le singulier ou le pluriel selon la langue', async () => {
+    const { translate } = await import('./i18n');
+    expect(translate('fr', 'claim.wagons', { n: 1 })).toBe('1 wagon');
+    expect(translate('fr', 'claim.wagons', { n: 0 })).toBe('0 wagon');
+    expect(translate('en', 'claim.wagons', { n: 0 })).toBe('0 trains');
+    expect(translate('en', 'picker.keep', { n: 2 })).toBe('Keep 2 destinations');
+  });
+
+  it('a toutes les clés en anglais, avec les mêmes paramètres', async () => {
+    const { fr } = await import('./i18n/fr');
+    const { en } = await import('./i18n/en');
+    const params = (s: string) =>
+      [...s.matchAll(/\{(\w+)\}/g)]
+        .map((m) => m[1])
+        .sort()
+        .join();
+    for (const key of Object.keys(fr) as (keyof typeof fr)[]) {
+      expect(en[key], key).toBeTypeOf('string');
+      expect(params(en[key]), key).toBe(params(fr[key]));
+    }
+  });
+
+  it('le chef de gare parle anglais', async () => {
+    const { advise } = await import('./advisor');
+    let s = createGame(
+      players(2).map((p, i) => ({ ...p, isBot: i > 0 })),
+      99,
+      'europe',
+    );
+    s = applyAction(s, 0, { type: 'keepTickets', keep: s.turn?.kind === 'tickets' ? s.turn.offered : [] });
+    s = applyAction(s, 1, botAction(s));
+    const a = advise(s, 0, 'en');
+    expect(a.headline).toMatch(/^(Claim|Take|Draw|Pass|Keep)/);
+    expect(a.reasons.join(' ')).not.toMatch(/[éèà]/);
   });
 });

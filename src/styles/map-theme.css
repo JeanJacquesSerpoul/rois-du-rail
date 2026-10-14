@@ -56,3 +56,22 @@
 .board .map-label--sea {
   fill: var(--map-sea-label);
 }
+
+/* limites intérieures (départements) et noms de régions */
+.map-border {
+  fill: none;
+  stroke: var(--map-coast);
+  stroke-opacity: 0.45;
+  stroke-width: 1.6;
+  stroke-dasharray: 6 5;
+}
+
+.map-label--region {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 15px;
+  fill: var(--map-coast);
+  opacity: 0.7;
+  letter-spacing: 1px;
+}

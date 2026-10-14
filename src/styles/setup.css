@@ -105,3 +105,74 @@
   font-size: 0.9rem;
   line-height: 1.45;
 }
+
+/* choix de la carte */
+.setup__label {
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.map-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.map-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 14px;
+  background: #fffaf0;
+  border: 2px solid #d9c79b;
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s;
+}
+
+.map-choice.is-on {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(168, 18, 42, 0.18);
+}
+
+.map-choice:active {
+  transform: scale(0.97);
+}
+
+.map-choice__svg {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 9px;
+  background: #b9d3d3;
+}
+
+.map-choice__name {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.05rem;
+  color: var(--navy);
+}
+
+.map-choice__desc {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--ink-soft);
+}
+
+.map-choice__meta {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--red);
+}
+
+@media (max-width: 420px) {
+  .map-choice__desc {
+    display: none;
+  }
+}

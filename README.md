@@ -5,8 +5,15 @@
 
 **▶ Jouer en ligne : https://jeanjacquesserpoul.github.io/rois-du-rail/**
 
-Jeu de conquête ferroviaire inspiré des *Aventuriers du Rail*, sur une carte originale de la France
-(44 villes, 99 routes, 40 billets de destination).
+Jeu de conquête ferroviaire inspiré des *Aventuriers du Rail*, avec trois cartes originales :
+
+| Carte | Villes | Routes | Wagons par joueur |
+| --- | --- | --- | --- |
+| France | 44 | 99 | 45 |
+| Bretagne (les 5 départements, Loire-Atlantique comprise) | 41 | 69 | 30 |
+| Europe (de Lisbonne à Moscou) | 50 | 94 | 45 |
+
+L'interface existe en **français et en anglais** (langue du navigateur par défaut, modifiable dans les réglages).
 
 - **React 19 + TypeScript + Vite**, animations avec **Motion**, zoom/pan tactile avec **react-zoom-pan-pinch**
 - **Serveur Express** qui fait autorité sur les règles (moteur partagé dans `shared/`)
@@ -45,7 +52,9 @@ gardées dans le `localStorage`. Un service worker met le jeu en cache : une foi
 ## Structure
 
 ```
-shared/   moteur de jeu pur (règles, carte, IA) – utilisé par le serveur et le client
+shared/   moteur de jeu pur (règles, IA, chef de gare) – utilisé par le serveur et le client
+  maps/   cartes (villes, routes, billets, contours) ; `npx tsx scripts/check-map.ts <carte>` les vérifie
+  i18n/   textes français et anglais
 server/   API Express + base SQLite (data/rois-du-rail.db, chemin modifiable via DB_PATH)
 src/      interface React
 ```

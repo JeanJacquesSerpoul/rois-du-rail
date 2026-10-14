@@ -90,7 +90,9 @@ export function saveMove(id: number, seat: number, action: Action, state: GameSt
 
 export function listGames() {
   const games = db
-    .prepare('SELECT id, status, created_at, updated_at FROM games ORDER BY updated_at DESC LIMIT 30')
+    .prepare(
+      "SELECT id, status, json_extract(state_json, '$.mapId') AS map_id, created_at, updated_at FROM games ORDER BY updated_at DESC LIMIT 30",
+    )
     .all() as Omit<GameRow, 'state_json'>[];
   const players = db.prepare('SELECT seat, name, is_bot, color, score, rank FROM game_players WHERE game_id = ? ORDER BY seat');
   return games.map((g) => ({ ...g, players: players.all(g.id) }));

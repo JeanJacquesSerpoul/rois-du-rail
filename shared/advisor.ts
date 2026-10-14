@@ -1,12 +1,13 @@
 import { botAction, neededRoutes, pendingTickets, planPath } from './bot';
-import { CARD_ADJ, ROUTE_POINTS, computePayment, routeName, ticketDone } from './engine';
-import { CITY_BY_ID, ROUTE_BY_ID, TICKET_BY_ID } from './map';
+import { ROUTE_POINTS, cityName, computePayment, mapOf, routeName, ticketDone } from './engine';
+import { type Lang, type T, cardsPhrase, makeT } from './i18n';
+import type { MessageKey } from './i18n/fr';
 import type { Action, CardColor, GameState, Route } from './types';
 
 /**
  * Le chef de gare : conseiller pour les joueurs humains. Il s'appuie sur l'IA
  * « difficile » et n'utilise que ce que le joueur peut voir (sa main, ses billets,
- * la table), puis explique son conseil en français.
+ * la table), puis explique son conseil dans la langue de l'interface.
  */
 
 export interface TicketStatus {
@@ -31,25 +32,27 @@ export interface Advice {
   deck?: 'cards' | 'tickets';
 }
 
-const ticketLabel = (id: number) => {
-  const t = TICKET_BY_ID[id];
-  return `${CITY_BY_ID[t.a].name} → ${CITY_BY_ID[t.b].name}`;
-};
-
-const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
-
-function cardsPhrase(color: CardColor, n: number): string {
-  if (color === 'loco') return plural(n, 'locomotive');
-  // « orange » est invariable, les autres couleurs prennent un s au pluriel
-  return `${plural(n, 'carte')} ${CARD_ADJ[color]}${n > 1 && color !== 'orange' ? 's' : ''}`;
+/** Contexte de rédaction : partie, langue, traducteur. */
+interface Ctx {
+  s: GameState;
+  seat: number;
+  lang: Lang;
+  t: T;
 }
 
-export function ticketStatuses(s: GameState, seat: number): TicketStatus[] {
+const ticketLabel = ({ s, lang }: Ctx, id: number) => {
+  const map = mapOf(s);
+  const ticket = map.ticketById[id];
+  return `${cityName(map, ticket.a, lang)} → ${cityName(map, ticket.b, lang)}`;
+};
+
+export function ticketStatuses(s: GameState, seat: number, lang: Lang = 'fr'): TicketStatus[] {
+  const ctx: Ctx = { s, seat, lang, t: makeT(lang) };
   return s.players[seat].tickets.map((id) => {
-    const t = TICKET_BY_ID[id];
-    const base = { id, label: ticketLabel(id), points: t.points };
+    const ticket = mapOf(s).ticketById[id];
+    const base = { id, label: ticketLabel(ctx, id), points: ticket.points };
     if (ticketDone(s, seat, id)) return { ...base, state: 'done' as const };
-    const plan = planPath(s, seat, t.a, t.b);
+    const plan = planPath(s, seat, ticket.a, ticket.b);
     return plan ? { ...base, state: 'open' as const, missing: plan.cost } : { ...base, state: 'blocked' as const };
   });
 }
@@ -57,18 +60,18 @@ export function ticketStatuses(s: GameState, seat: number): TicketStatus[] {
 /** Billets en cours dont le trajet prévu passe par cette route. */
 function ticketsUsing(s: GameState, seat: number, routeId: number): number[] {
   return pendingTickets(s, seat).filter((id) => {
-    const t = TICKET_BY_ID[id];
-    return planPath(s, seat, t.a, t.b)?.routes.some((r) => r.id === routeId);
+    const ticket = mapOf(s).ticketById[id];
+    return planPath(s, seat, ticket.a, ticket.b)?.routes.some((r) => r.id === routeId);
   });
 }
 
 /** Coût supplémentaire si la route nous échappe (Infinity : plus de chemin du tout). */
 function detourCost(s: GameState, seat: number, routeId: number, ticketId: number): number {
-  const t = TICKET_BY_ID[ticketId];
-  const base = planPath(s, seat, t.a, t.b);
-  const alt = planPath(s, seat, t.a, t.b, { exclude: routeId });
+  const ticket = mapOf(s).ticketById[ticketId];
+  const base = planPath(s, seat, ticket.a, ticket.b);
+  const alt = planPath(s, seat, ticket.a, ticket.b, { exclude: routeId });
   if (!base) return 0;
-  return alt ? alt.cost - base.cost : Infinity;
+  return alt ? alt.cost - base.cost : Number.POSITIVE_INFINITY;
 }
 
 /** Route utile la plus prioritaire qui attend des cartes de cette couleur. */
@@ -80,47 +83,48 @@ function routeWanting(s: GameState, seat: number, color: CardColor): Route | und
     .find((r) => r.color === 'gray' || hand[color] < r.length);
 }
 
-function explainClaim(s: GameState, seat: number, routeId: number, color: CardColor, advice: Advice) {
-  const route = ROUTE_BY_ID[routeId];
+function explainClaim(ctx: Ctx, routeId: number, color: CardColor, advice: Advice) {
+  const { s, seat, lang, t } = ctx;
+  const map = mapOf(s);
+  const route = map.routeById[routeId];
   const pay = computePayment(s.players[seat].hand, route, color);
   advice.routeId = routeId;
   advice.cities = [route.a, route.b];
-  advice.headline = `Prenez la route ${routeName(route)}`;
+  advice.headline = t('advice.claim', { route: routeName(map, route, lang) });
   if (pay) {
     const parts = [
-      pay.colored ? cardsPhrase(pay.color, pay.colored) : '',
-      pay.locos ? cardsPhrase('loco', pay.locos) : '',
+      pay.colored ? cardsPhrase(t, lang, pay.color, pay.colored) : '',
+      pay.locos ? cardsPhrase(t, lang, 'loco', pay.locos) : '',
     ].filter(Boolean);
-    advice.reasons.push(`Payez avec ${parts.join(' et ')} : +${ROUTE_POINTS[route.length]} points.`);
+    advice.reasons.push(t('advice.pay', { cards: parts.join(t('common.and')), pts: ROUTE_POINTS[route.length] }));
   }
   const users = ticketsUsing(s, seat, routeId);
   if (users.length) {
-    advice.reasons.push(
-      `Elle sert ${users.length > 1 ? 'à vos billets' : 'à votre billet'} ${users.map(ticketLabel).join(', ')}.`,
-    );
+    advice.reasons.push(t('advice.serves', { n: users.length, tickets: users.map((id) => ticketLabel(ctx, id)).join(', ') }));
     const detour = Math.max(...users.map((id) => detourCost(s, seat, routeId, id)));
-    if (detour === Infinity)
-      advice.reasons.push('C’est le seul passage possible : si un adversaire la prend, le billet sera perdu.');
-    else if (detour >= 2) advice.reasons.push(`Sans elle, le détour coûterait ${plural(detour, 'wagon')} de plus.`);
+    if (detour === Number.POSITIVE_INFINITY) advice.reasons.push(t('advice.onlyWay'));
+    else if (detour >= 2) advice.reasons.push(t('advice.detour', { n: detour }));
   } else if (route.length >= 4) {
-    advice.reasons.push('Les routes longues rapportent beaucoup de points par wagon posé.');
+    advice.reasons.push(t('advice.longRoute'));
   } else {
-    advice.reasons.push('Elle allonge votre réseau, utile pour le bonus du plus long trajet.');
+    advice.reasons.push(t('advice.network'));
   }
 }
 
-function explainCard(s: GameState, seat: number, action: Action, advice: Advice) {
+function explainCard(ctx: Ctx, action: Action, advice: Advice) {
+  const { s, seat, lang, t } = ctx;
+  const map = mapOf(s);
   const second = s.turn?.kind === 'draw';
   if (action.type === 'drawFaceUp') {
     const card = s.market[action.index]!;
     advice.marketIndex = action.index;
     if (card === 'loco') {
-      advice.headline = 'Prenez la locomotive visible';
-      advice.reasons.push('Elle remplace n’importe quelle couleur, idéale pour finir une route.');
-      advice.reasons.push('Attention : une locomotive visible compte pour vos deux cartes du tour.');
+      advice.headline = t('advice.takeLoco');
+      advice.reasons.push(t('advice.locoJoker'));
+      advice.reasons.push(t('advice.locoTurn'));
       return;
     }
-    advice.headline = `Prenez la carte ${CARD_ADJ[card]} visible`;
+    advice.headline = t('advice.takeCard', { color: t(`card.${card}` as MessageKey) });
     const target = routeWanting(s, seat, card);
     if (target) {
       const missing = Math.max(1, target.length - s.players[seat].hand[card]);
@@ -128,89 +132,86 @@ function explainCard(s: GameState, seat: number, action: Action, advice: Advice)
       advice.routeId = target.id;
       advice.reasons.push(
         target.color === 'gray'
-          ? `Elle complète votre plus grosse couleur pour la route grise ${routeName(target)}.`
-          : `Il vous manque ${cardsPhrase(card, missing)} pour ${routeName(target)}.`,
+          ? t('advice.grayRoute', { route: routeName(map, target, lang) })
+          : t('advice.missing', { cards: cardsPhrase(t, lang, card, missing), route: routeName(map, target, lang) }),
       );
     } else {
-      advice.reasons.push('C’est la carte visible la plus utile pour vos prochaines routes.');
+      advice.reasons.push(t('advice.usefulCard'));
     }
   } else {
     advice.deck = 'cards';
-    advice.headline = second ? 'Piochez votre seconde carte dans la pioche' : 'Piochez dans la pioche';
-    advice.reasons.push('Aucune carte visible ne fait avancer vos routes : tentez votre chance à l’aveugle.');
+    advice.headline = second ? t('advice.deckSecond') : t('advice.deck');
+    advice.reasons.push(t('advice.blind'));
   }
-  if (!second) advice.reasons.push('Vous pourrez ensuite prendre une seconde carte.');
+  if (!second) advice.reasons.push(t('advice.thenSecond'));
 }
 
-function explainTickets(s: GameState, seat: number, keep: number[], offered: number[], advice: Advice) {
-  advice.headline = `Gardez ${plural(keep.length, 'destination')}`;
-  advice.cities = [...new Set(keep.flatMap((id) => [TICKET_BY_ID[id].a, TICKET_BY_ID[id].b]))];
+function explainTickets(ctx: Ctx, keep: number[], offered: number[], advice: Advice) {
+  const { s, seat, t } = ctx;
+  const map = mapOf(s);
+  advice.headline = t('advice.keep', { n: keep.length });
+  advice.cities = [...new Set(keep.flatMap((id) => [map.ticketById[id].a, map.ticketById[id].b]))];
   const planned = new Set(neededRoutes(s, seat, true).map((r) => r.id));
   for (const id of offered) {
-    const t = TICKET_BY_ID[id];
-    const plan = planPath(s, seat, t.a, t.b, { planned });
-    const cost = plan ? plan.cost : Infinity;
-    const label = `${ticketLabel(id)} (${t.points} pts)`;
+    const ticket = map.ticketById[id];
+    const plan = planPath(s, seat, ticket.a, ticket.b, { planned });
+    const cost = plan ? plan.cost : Number.POSITIVE_INFINITY;
+    const label = `${ticketLabel(ctx, id)} (${ticket.points} pts)`;
     if (keep.includes(id)) {
-      advice.reasons.push(
-        cost === 0
-          ? `✓ ${label} : déjà presque relié par vos trajets prévus.`
-          : `✓ ${label} : environ ${plural(cost, 'wagon')} à poser.`,
-      );
+      advice.reasons.push(cost === 0 ? t('advice.keepFree', { label }) : t('advice.keepCost', { label, n: cost }));
     } else {
       advice.reasons.push(
-        cost === Infinity
-          ? `✗ ${label} : plus réalisable, des routes sont déjà prises.`
-          : `✗ ${label} : trop coûteux (${plural(cost, 'wagon')}) pour le risque de perdre ${t.points} points.`,
+        cost === Number.POSITIVE_INFINITY
+          ? t('advice.dropBlocked', { label })
+          : t('advice.dropCost', { label, n: cost, pts: ticket.points }),
       );
     }
   }
 }
 
-export function advise(s: GameState, seat: number): Advice {
+export function advise(s: GameState, seat: number, lang: Lang = 'fr'): Advice {
+  const t = makeT(lang);
+  const ctx: Ctx = { s, seat, lang, t };
   // le conseil est celui que jouerait l'IA difficile à la place du joueur
   const asHard: GameState = { ...s, current: seat, players: s.players.map((p, i) => (i === seat ? { ...p, level: 'hard' } : p)) };
   const action = botAction(asHard);
   const me = s.players[seat];
-  const advice: Advice = { action, headline: '', reasons: [], warnings: [], tickets: ticketStatuses(s, seat), cities: [] };
+  const advice: Advice = { action, headline: '', reasons: [], warnings: [], tickets: ticketStatuses(s, seat, lang), cities: [] };
 
   switch (action.type) {
     case 'claimRoute':
-      explainClaim(s, seat, action.routeId, action.color, advice);
+      explainClaim(ctx, action.routeId, action.color, advice);
       break;
     case 'drawFaceUp':
     case 'drawDeck':
-      explainCard(s, seat, action, advice);
+      explainCard(ctx, action, advice);
       break;
     case 'drawTickets':
       advice.deck = 'tickets';
-      advice.headline = 'Piochez de nouvelles destinations';
-      advice.reasons.push(`Vos billets sont réalisés et il vous reste ${plural(me.wagons, 'wagon')}.`);
-      advice.reasons.push('Un nouveau billet bien choisi rapporte plus qu’une route isolée.');
+      advice.headline = t('advice.drawTickets');
+      advice.reasons.push(t('advice.allDone', { n: me.wagons }));
+      advice.reasons.push(t('advice.newTicket'));
       break;
     case 'keepTickets':
-      if (s.turn?.kind === 'tickets') explainTickets(s, seat, action.keep, s.turn.offered, advice);
+      if (s.turn?.kind === 'tickets') explainTickets(ctx, action.keep, s.turn.offered, advice);
       break;
     case 'pass':
-      advice.headline = 'Passez votre tour';
-      advice.reasons.push('Aucun coup n’est possible pour le moment.');
+      advice.headline = t('advice.pass');
+      advice.reasons.push(t('advice.noMove'));
       break;
   }
 
   // mises en garde générales
-  for (const t of advice.tickets) {
-    if (t.state === 'blocked')
-      advice.warnings.push(`Le billet ${t.label} n’est plus réalisable : il vous coûtera ${t.points} points.`);
+  for (const ticket of advice.tickets) {
+    if (ticket.state === 'blocked') advice.warnings.push(t('advice.warnBlocked', { label: ticket.label, pts: ticket.points }));
   }
-  const missing = advice.tickets.reduce((n, t) => n + (t.missing ?? 0), 0);
-  if (missing > me.wagons)
-    advice.warnings.push(`Vos billets demandent environ ${missing} wagons, il ne vous en reste que ${me.wagons}.`);
+  const missing = advice.tickets.reduce((n, ticket) => n + (ticket.missing ?? 0), 0);
+  if (missing > me.wagons) advice.warnings.push(t('advice.warnWagons', { need: missing, n: me.wagons }));
   const rival = s.players
     .map((p, i) => ({ p, i }))
     .filter(({ i }) => i !== seat)
     .sort((a, b) => a.p.wagons - b.p.wagons)[0];
-  if (s.lastRound) advice.warnings.push('C’est le dernier tour : marquez un maximum de points maintenant.');
-  else if (rival && rival.p.wagons <= 8)
-    advice.warnings.push(`${rival.p.name} n’a plus que ${plural(rival.p.wagons, 'wagon')} : la fin de partie approche.`);
+  if (s.lastRound) advice.warnings.push(t('advice.warnLast'));
+  else if (rival && rival.p.wagons <= 8) advice.warnings.push(t('advice.warnEnd', { name: rival.p.name, n: rival.p.wagons }));
   return advice;
 }

@@ -11,7 +11,8 @@ export default defineConfig({
   fullyParallel: true,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
-  use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
+  // l'interface suit la langue du navigateur : les scénarios sont écrits en français
+  use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure', locale: 'fr-FR' },
   projects: [
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },

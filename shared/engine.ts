@@ -1,9 +1,13 @@
-import { CITY_BY_ID, ROUTES, ROUTE_BY_ID, TICKETS, TICKET_BY_ID } from './map';
+import { type GameMap, type MapId, getMap } from './maps';
 import type { Action, CardColor, GameEvent, GameState, Hand, PlayerConfig, PlayerResult, Route, TrainColor } from './types';
 
 export const TRAIN_COLORS: TrainColor[] = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'black', 'white'];
 export const CARD_COLORS: CardColor[] = [...TRAIN_COLORS, 'loco'];
+/** Wagons par joueur sur la carte de France (chaque carte fixe sa propre valeur). */
 export const WAGONS_PER_PLAYER = 45;
+
+/** Carte de la partie. */
+export const mapOf = (s: GameState): GameMap => getMap(s.mapId);
 export const ROUTE_POINTS: Record<number, number> = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15 };
 export const LONGEST_BONUS = 10;
 export const MARKET_SIZE = 5;
@@ -34,10 +38,44 @@ export const CARD_ADJ: Record<CardColor, string> = {
   loco: 'locomotive',
 };
 
-export class GameError extends Error {}
+/** Codes d'erreur : le message affiché est traduit côté interface (clé `error.<code>`). */
+export type ErrorCode =
+  | 'players'
+  | 'finished'
+  | 'notYourTurn'
+  | 'chooseTicketsFirst'
+  | 'chooseTickets'
+  | 'secondCard'
+  | 'noTicketChoice'
+  | 'badTicket'
+  | 'keepMore'
+  | 'noTickets'
+  | 'noCard'
+  | 'locoSecond'
+  | 'emptyDeck'
+  | 'unknownRoute'
+  | 'routeTaken'
+  | 'doubleClosed'
+  | 'doubleOwned'
+  | 'noWagons'
+  | 'noCards'
+  | 'canPlay'
+  | 'unknownAction'
+  | 'colors'
+  | 'botSeat'
+  | 'notFound';
 
-function fail(msg: string): never {
-  throw new GameError(msg);
+export class GameError extends Error {
+  constructor(
+    public code: ErrorCode,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+function fail(code: ErrorCode, msg: string): never {
+  throw new GameError(code, msg);
 }
 
 // ---------------------------------------------------------------- aléatoire
@@ -69,8 +107,14 @@ export function handSize(h: Hand): number {
   return CARD_COLORS.reduce((n, c) => n + h[c], 0);
 }
 
-export function routeName(r: Route): string {
-  return `${CITY_BY_ID[r.a].name} – ${CITY_BY_ID[r.b].name}`;
+/** Nom d'une ville dans la langue demandée. */
+export function cityName(map: GameMap, id: string, lang: 'fr' | 'en' = 'fr'): string {
+  const c = map.cityById[id];
+  return lang === 'en' ? (c.nameEn ?? c.name) : c.name;
+}
+
+export function routeName(map: GameMap, r: Route, lang: 'fr' | 'en' = 'fr'): string {
+  return `${cityName(map, r.a, lang)} – ${cityName(map, r.b, lang)}`;
 }
 
 function pushEvent(s: GameState, e: Omit<GameEvent, 'seq'>) {
@@ -110,13 +154,15 @@ function drawTicketsFromDeck(s: GameState, n: number): number[] {
 
 // ---------------------------------------------------------------- création
 
-export function createGame(configs: PlayerConfig[], seed = Date.now()): GameState {
-  if (configs.length < 2 || configs.length > 5) fail('Il faut entre 2 et 5 joueurs.');
+export function createGame(configs: PlayerConfig[], seed = Date.now(), mapId: MapId = 'france'): GameState {
+  const map = getMap(mapId);
+  if (configs.length < 2 || configs.length > 5) fail('players', 'Il faut entre 2 et 5 joueurs.');
   const s: GameState = {
     version: 1,
+    mapId: map.id,
     rng: seed | 0,
     phase: 'setup',
-    players: configs.map((c) => ({ ...c, hand: emptyHand(), tickets: [], wagons: WAGONS_PER_PLAYER, routePoints: 0 })),
+    players: configs.map((c) => ({ ...c, hand: emptyHand(), tickets: [], wagons: map.wagons, routePoints: 0 })),
     current: 0,
     turn: null,
     deck: [],
@@ -136,7 +182,7 @@ export function createGame(configs: PlayerConfig[], seed = Date.now()): GameStat
   shuffle(s, s.deck);
   s.ticketDeck = shuffle(
     s,
-    TICKETS.map((t) => t.id),
+    map.tickets.map((t) => t.id),
   );
   for (const p of s.players) {
     for (let i = 0; i < 4; i++) p.hand[drawFromDeck(s)!] += 1;
@@ -180,7 +226,7 @@ export function paymentOptions(hand: Hand, route: Route): Payment[] {
 export type ClaimStatus = 'ok' | 'owned' | 'pair' | 'wagons' | 'cards' | 'notYourTurn';
 
 export function claimStatus(s: GameState, seat: number, routeId: number): ClaimStatus {
-  const route = ROUTE_BY_ID[routeId];
+  const route = mapOf(s).routeById[routeId];
   if (s.phase !== 'playing' || s.current !== seat || s.turn !== null) return 'notYourTurn';
   if (s.owners[routeId] !== undefined) return 'owned';
   if (routeBlockedByPair(s, route, seat)) return 'pair';
@@ -192,7 +238,7 @@ export function claimStatus(s: GameState, seat: number, routeId: number): ClaimS
 // ---------------------------------------------------------------- réseau d'un joueur
 
 function playerRoutes(s: GameState, seat: number): Route[] {
-  return ROUTES.filter((r) => s.owners[r.id] === seat);
+  return mapOf(s).routes.filter((r) => s.owners[r.id] === seat);
 }
 
 export function connectedComponents(s: GameState, seat: number): Map<string, string> {
@@ -210,7 +256,7 @@ export function connectedComponents(s: GameState, seat: number): Map<string, str
 }
 
 export function ticketDone(s: GameState, seat: number, ticketId: number): boolean {
-  const t = TICKET_BY_ID[ticketId];
+  const t = mapOf(s).ticketById[ticketId];
   const comp = connectedComponents(s, seat);
   const root = (x: string) => {
     let p = comp.get(x);
@@ -251,7 +297,7 @@ export function computeResults(s: GameState): PlayerResult[] {
   const raw = s.players.map((p, seat) => {
     const tickets = p.tickets.map((id) => {
       const done = ticketDone(s, seat, id);
-      return { id, done, points: done ? TICKET_BY_ID[id].points : -TICKET_BY_ID[id].points };
+      return { id, done, points: done ? mapOf(s).ticketById[id].points : -mapOf(s).ticketById[id].points };
     });
     return {
       seat,
@@ -294,7 +340,7 @@ export function hasLegalMove(s: GameState): boolean {
   const seat = s.current;
   if (canDrawAnyCard(s, true)) return true;
   if (s.ticketDeck.length > 0) return true;
-  return ROUTES.some((r) => claimStatus(s, seat, r.id) === 'ok');
+  return mapOf(s).routes.some((r) => claimStatus(s, seat, r.id) === 'ok');
 }
 
 function finish(s: GameState) {
@@ -316,6 +362,7 @@ function endTurn(s: GameState) {
     pushEvent(s, {
       seat: s.current,
       kind: 'lastRound',
+      count: p.wagons,
       text: `${p.name} n'a plus que ${p.wagons} wagon${p.wagons > 1 ? 's' : ''} : dernier tour pour tout le monde !`,
     });
   }
@@ -325,25 +372,25 @@ function endTurn(s: GameState) {
 }
 
 export function applyAction(state: GameState, seat: number, action: Action): GameState {
-  if (state.phase === 'finished') fail('La partie est terminée.');
-  if (seat !== state.current) fail("Ce n'est pas votre tour.");
+  if (state.phase === 'finished') fail('finished', 'La partie est terminée.');
+  if (seat !== state.current) fail('notYourTurn', "Ce n'est pas votre tour.");
   const s: GameState = structuredClone(state);
   const p = s.players[seat];
   const turn = s.turn;
 
-  if (s.phase === 'setup' && action.type !== 'keepTickets') fail('Choisissez d’abord vos destinations.');
-  if (turn?.kind === 'tickets' && action.type !== 'keepTickets') fail('Choisissez vos destinations.');
+  if (s.phase === 'setup' && action.type !== 'keepTickets') fail('chooseTicketsFirst', 'Choisissez d’abord vos destinations.');
+  if (turn?.kind === 'tickets' && action.type !== 'keepTickets') fail('chooseTickets', 'Choisissez vos destinations.');
   if (turn?.kind === 'draw' && action.type !== 'drawFaceUp' && action.type !== 'drawDeck')
-    fail('Vous devez prendre une seconde carte.');
+    fail('secondCard', 'Vous devez prendre une seconde carte.');
   if (action.type !== 'pass') s.consecutivePasses = 0;
 
   switch (action.type) {
     case 'keepTickets': {
-      if (turn?.kind !== 'tickets') fail('Aucune destination à choisir.');
+      if (turn?.kind !== 'tickets') fail('noTicketChoice', 'Aucune destination à choisir.');
       const keep = [...new Set(action.keep)];
-      if (!keep.every((id) => turn.offered.includes(id))) fail('Destination invalide.');
+      if (!keep.every((id) => turn.offered.includes(id))) fail('badTicket', 'Destination invalide.');
       if (keep.length < Math.min(turn.min, turn.offered.length))
-        fail(`Gardez au moins ${turn.min} destination${turn.min > 1 ? 's' : ''}.`);
+        fail('keepMore', `Gardez au moins ${turn.min} destination${turn.min > 1 ? 's' : ''}.`);
       p.tickets.push(...keep);
       s.ticketDeck.push(...turn.offered.filter((id) => !keep.includes(id)));
       pushEvent(s, {
@@ -368,7 +415,7 @@ export function applyAction(state: GameState, seat: number, action: Action): Gam
     }
 
     case 'drawTickets': {
-      if (s.ticketDeck.length === 0) fail('Plus de destinations disponibles.');
+      if (s.ticketDeck.length === 0) fail('noTickets', 'Plus de destinations disponibles.');
       s.turn = { kind: 'tickets', offered: drawTicketsFromDeck(s, 3), min: 1 };
       pushEvent(s, { seat, kind: 'drawTickets', text: `${p.name} pioche des destinations.` });
       break;
@@ -376,8 +423,9 @@ export function applyAction(state: GameState, seat: number, action: Action): Gam
 
     case 'drawFaceUp': {
       const card = s.market[action.index];
-      if (!card) fail('Pas de carte à cet emplacement.');
-      if (card === 'loco' && turn?.kind === 'draw') fail('Une locomotive visible ne peut pas être prise en seconde carte.');
+      if (!card) fail('noCard', 'Pas de carte à cet emplacement.');
+      if (card === 'loco' && turn?.kind === 'draw')
+        fail('locoSecond', 'Une locomotive visible ne peut pas être prise en seconde carte.');
       p.hand[card] += 1;
       s.market[action.index] = null;
       refillMarket(s);
@@ -394,7 +442,7 @@ export function applyAction(state: GameState, seat: number, action: Action): Gam
 
     case 'drawDeck': {
       const card = drawFromDeck(s);
-      if (!card) fail('La pioche est vide.');
+      if (!card) fail('emptyDeck', 'La pioche est vide.');
       p.hand[card] += 1;
       pushEvent(s, { seat, kind: 'drawDeck', card, text: `${p.name} pioche une carte.` });
       if (turn?.kind === 'draw' || !canDrawAnyCard(s, false)) endTurn(s);
@@ -403,15 +451,17 @@ export function applyAction(state: GameState, seat: number, action: Action): Gam
     }
 
     case 'claimRoute': {
-      const route = ROUTE_BY_ID[action.routeId];
-      if (!route) fail('Route inconnue.');
+      const route = mapOf(s).routeById[action.routeId];
+      if (!route) fail('unknownRoute', 'Route inconnue.');
       const status = claimStatus(s, seat, route.id);
-      if (status === 'owned') fail('Cette route est déjà prise.');
+      if (status === 'owned') fail('routeTaken', 'Cette route est déjà prise.');
       if (status === 'pair')
-        fail(s.players.length < 4 ? 'Voie double fermée à moins de 4 joueurs.' : 'Vous possédez déjà la voie parallèle.');
-      if (status === 'wagons') fail('Pas assez de wagons.');
+        s.players.length < 4
+          ? fail('doubleClosed', 'Voie double fermée à moins de 4 joueurs.')
+          : fail('doubleOwned', 'Vous possédez déjà la voie parallèle.');
+      if (status === 'wagons') fail('noWagons', 'Pas assez de wagons.');
       const pay = computePayment(p.hand, route, action.color);
-      if (!pay) fail('Cartes insuffisantes pour cette route.');
+      if (!pay) fail('noCards', 'Cartes insuffisantes pour cette route.');
       if (pay.colored) {
         p.hand[pay.color] -= pay.colored;
         for (let i = 0; i < pay.colored; i++) s.discard.push(pay.color);
@@ -427,14 +477,14 @@ export function applyAction(state: GameState, seat: number, action: Action): Gam
         seat,
         kind: 'claimRoute',
         routeId: route.id,
-        text: `${p.name} prend ${routeName(route)} (+${ROUTE_POINTS[route.length]}).`,
+        text: `${p.name} prend ${routeName(mapOf(s), route)} (+${ROUTE_POINTS[route.length]}).`,
       });
       endTurn(s);
       break;
     }
 
     case 'pass': {
-      if (hasLegalMove(s)) fail('Vous avez encore des coups possibles.');
+      if (hasLegalMove(s)) fail('canPlay', 'Vous avez encore des coups possibles.');
       s.consecutivePasses += 1;
       pushEvent(s, { seat, kind: 'pass', text: `${p.name} passe son tour.` });
       endTurn(s);
@@ -442,7 +492,7 @@ export function applyAction(state: GameState, seat: number, action: Action): Gam
     }
 
     default:
-      fail('Action inconnue.');
+      fail('unknownAction', 'Action inconnue.');
   }
   return s;
 }

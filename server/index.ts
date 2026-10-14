@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { BOT_LEVELS, botAction } from '../shared/bot';
 import { GameError, applyAction, createGame } from '../shared/engine';
+import { MAP_IDS, type MapId } from '../shared/maps';
 import type { Action, BotLevel, PlayerColor, PlayerConfig } from '../shared/types';
 import { deleteGame, getGame, insertGame, leaderboard, listGames, saveMove } from './db';
 
@@ -18,7 +19,7 @@ app.get('/api/games', (_req, res) => {
 
 app.post('/api/games', (req, res) => {
   const raw = (req.body?.players ?? []) as Partial<PlayerConfig>[];
-  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 5) throw new GameError('Il faut entre 2 et 5 joueurs.');
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 5) throw new GameError('players', 'Il faut entre 2 et 5 joueurs.');
   const players: PlayerConfig[] = raw.map((p, i) => ({
     name:
       String(p.name ?? '')
@@ -28,15 +29,17 @@ app.post('/api/games', (req, res) => {
     level: BOT_LEVELS.includes(p.level as BotLevel) ? p.level : 'normal',
     color: PLAYER_COLORS.includes(p.color as PlayerColor) ? (p.color as PlayerColor) : PLAYER_COLORS[i],
   }));
-  if (new Set(players.map((p) => p.color)).size !== players.length) throw new GameError('Chaque joueur doit avoir sa couleur.');
-  const state = createGame(players, Math.floor(Math.random() * 2 ** 31));
+  if (new Set(players.map((p) => p.color)).size !== players.length)
+    throw new GameError('colors', 'Chaque joueur doit avoir sa couleur.');
+  const mapId = MAP_IDS.includes(req.body?.mapId) ? (req.body.mapId as MapId) : 'france';
+  const state = createGame(players, Math.floor(Math.random() * 2 ** 31), mapId);
   const id = insertGame(state);
   res.status(201).json({ id, state });
 });
 
 app.get('/api/games/:id', (req, res) => {
   const state = getGame(gameId(req));
-  if (!state) return void res.status(404).json({ error: 'Partie introuvable.' });
+  if (!state) return void res.status(404).json({ error: 'Partie introuvable.', code: 'notFound' });
   res.json({ id: gameId(req), state });
 });
 
@@ -51,7 +54,7 @@ app.post('/api/games/:id/actions', (req, res) => {
   const state = getGame(id);
   if (!state) return void res.status(404).json({ error: 'Partie introuvable.' });
   const { seat, action } = req.body as { seat: number; action: Action };
-  if (state.players[seat]?.isBot) throw new GameError('Ce joueur est contrôlé par l’ordinateur.');
+  if (state.players[seat]?.isBot) throw new GameError('botSeat', 'Ce joueur est contrôlé par l’ordinateur.');
   const next = applyAction(state, seat, action);
   saveMove(id, seat, action, next);
   res.json({ id, state: next });
@@ -81,7 +84,7 @@ if (process.env.NODE_ENV === 'production' && existsSync(dist)) {
 }
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  if (err instanceof GameError) return void res.status(400).json({ error: err.message });
+  if (err instanceof GameError) return void res.status(400).json({ error: err.message, code: err.code });
   console.error(err);
   res.status(500).json({ error: 'Erreur interne du serveur.' });
 });

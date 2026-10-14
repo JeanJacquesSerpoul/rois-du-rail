@@ -17,7 +17,7 @@ async function savedGame(page: Page) {
     return store.games[id]?.state as {
       owners: Record<string, number>;
       phase: string;
-      players: { hand: Record<string, number> }[];
+      players: { hand: Record<string, number>; wagons: number }[];
     };
   });
 }
@@ -111,4 +111,26 @@ test('le jeu se recharge sans réseau grâce au service worker', async ({ page, 
   await page.getByRole('button', { name: /Nouvelle partie/ }).click();
   await expect(page.getByRole('button', { name: /En voiture/ })).toBeVisible();
   await context.setOffline(false);
+});
+
+test.describe('in English', () => {
+  test.use({ locale: 'en-GB' });
+
+  test('plays the Europe map in English', async ({ page }) => {
+    await fastPrefs(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: /New game/ }).click();
+    await page.getByRole('button', { name: /Europe/ }).click();
+    await page.getByRole('button', { name: '2', exact: true }).click();
+    await page.getByRole('button', { name: /All aboard/ }).click();
+    await page.getByRole('button', { name: /Keep \d destination/ }).click();
+    await expect(page.locator('.status')).toContainText('Your turn');
+    await expect(page.locator('.city__label', { hasText: 'Lisbon' })).toHaveCount(1);
+    expect((await savedGame(page)).players[0].wagons).toBe(45);
+    const state = await page.evaluate(() => {
+      const store = JSON.parse(localStorage.getItem('rdr.games.v1') ?? '{}');
+      return store.games[Number(location.hash.split('/').pop())].state.mapId;
+    });
+    expect(state).toBe('europe');
+  });
 });

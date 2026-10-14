@@ -1,9 +1,12 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useRef, useState } from 'react';
+import { cityName } from '../../shared/engine';
+import type { GameMap } from '../../shared/maps';
+import { useT } from '../lib/i18n';
 import { useFocusTrap } from '../lib/useFocusTrap';
-import { CITY_BY_ID, FRANCE_PATH, MAP_HEIGHT, MAP_WIDTH, NEIGHBOR_PATHS, TICKET_BY_ID } from '../../shared/map';
 
 interface TicketCardProps {
+  map: GameMap;
   id: number;
   done?: boolean;
   selected?: boolean;
@@ -11,11 +14,14 @@ interface TicketCardProps {
   points?: number;
 }
 
-export function TicketCard({ id, done, selected, onClick, points }: TicketCardProps) {
-  const t = TICKET_BY_ID[id];
-  const a = CITY_BY_ID[t.a];
-  const b = CITY_BY_ID[t.b];
+export function TicketCard({ map, id, done, selected, onClick, points }: TicketCardProps) {
+  const { t, lang } = useT();
+  const ticket = map.ticketById[id];
+  const a = map.cityById[ticket.a];
+  const b = map.cityById[ticket.b];
   const Tag = onClick ? motion.button : motion.div;
+  // épaisseurs de la mini-carte proportionnelles à la taille de la carte
+  const k = map.width / 935;
   return (
     <Tag
       type={onClick ? 'button' : undefined}
@@ -24,41 +30,44 @@ export function TicketCard({ id, done, selected, onClick, points }: TicketCardPr
       whileTap={onClick ? { scale: 0.96 } : undefined}
       layout
     >
-      <svg viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} className="ticket__map" aria-hidden>
-        <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="#cfe0e0" />
-        {NEIGHBOR_PATHS.map((d, i) => (
-          <path key={i} d={d} fill="#e6dcc3" />
+      <svg viewBox={`0 0 ${map.width} ${map.height}`} className="ticket__map" aria-hidden>
+        <rect width={map.width} height={map.height} fill="#cfe0e0" />
+        {map.neighborPaths.map((d, i) => (
+          <path key={`n${i}`} d={d} fill="#e6dcc3" />
         ))}
-        <path d={FRANCE_PATH} fill="#f6ebcf" stroke="#8a6d3b" strokeWidth="8" />
+        {map.landPaths.map((d, i) => (
+          <path key={`l${i}`} d={d} fill="#f6ebcf" stroke="#8a6d3b" strokeWidth={8 * k} />
+        ))}
         <line
           x1={a.x}
           y1={a.y}
           x2={b.x}
           y2={b.y}
           stroke="#a8122a"
-          strokeWidth="14"
-          strokeDasharray="28 18"
+          strokeWidth={14 * k}
+          strokeDasharray={`${28 * k} ${18 * k}`}
           strokeLinecap="round"
         />
-        <circle cx={a.x} cy={a.y} r="34" fill="#a8122a" stroke="#fff" strokeWidth="10" />
-        <circle cx={b.x} cy={b.y} r="34" fill="#a8122a" stroke="#fff" strokeWidth="10" />
+        <circle cx={a.x} cy={a.y} r={34 * k} fill="#a8122a" stroke="#fff" strokeWidth={10 * k} />
+        <circle cx={b.x} cy={b.y} r={34 * k} fill="#a8122a" stroke="#fff" strokeWidth={10 * k} />
       </svg>
       <div className="ticket__body">
         <span className="ticket__cities">
-          {a.name}
+          {cityName(map, a.id, lang)}
           <span className="ticket__arrow">⟶</span>
-          {b.name}
+          {cityName(map, b.id, lang)}
         </span>
         <span className={`ticket__points ${points !== undefined && points < 0 ? 'is-negative' : ''}`}>
-          {points !== undefined ? (points > 0 ? `+${points}` : points) : t.points}
+          {points !== undefined ? (points > 0 ? `+${points}` : points) : ticket.points}
         </span>
       </div>
-      {done && <span className="ticket__stamp">Réalisé</span>}
+      {done && <span className="ticket__stamp">{t('tickets.stamp')}</span>}
     </Tag>
   );
 }
 
 interface PickerProps {
+  map: GameMap;
   offered: number[];
   min: number;
   onConfirm: (keep: number[]) => void;
@@ -68,25 +77,24 @@ interface PickerProps {
   onAdvice?: () => { keep: number[]; reasons: string[] };
 }
 
-export function TicketPicker({ offered, min, onConfirm, busy, onPreview, onAdvice }: PickerProps) {
+export function TicketPicker({ map, offered, min, onConfirm, busy, onPreview, onAdvice }: PickerProps) {
+  const { t } = useT();
   const [keep, setKeep] = useState<number[]>(offered);
   const [advice, setAdvice] = useState<string[] | null>(null);
+  const cities = (ids: number[]) => ids.flatMap((k) => [map.ticketById[k].a, map.ticketById[k].b]);
   const toggle = (id: number) => {
     const next = keep.includes(id) ? keep.filter((k) => k !== id) : [...keep, id];
     setKeep(next);
-    onPreview(next.flatMap((k) => [TICKET_BY_ID[k].a, TICKET_BY_ID[k].b]));
+    onPreview(cities(next));
   };
   const ok = keep.length >= Math.min(min, offered.length);
   return (
-    <Sheet
-      title="Choisissez vos destinations"
-      subtitle={`Gardez-en au moins ${min}. Les destinations non réalisées coûtent leurs points en fin de partie.`}
-    >
+    <Sheet title={t('picker.title')} subtitle={t('picker.subtitle', { n: min })}>
       {onAdvice && (
         <div className="picker-advice">
           {advice ? (
             <motion.ul className="picker-advice__list" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
-              <li className="picker-advice__who">🧑‍✈️ Le chef de gare :</li>
+              <li className="picker-advice__who">{t('picker.adviceWho')}</li>
               {advice.map((r) => (
                 <li key={r}>{r}</li>
               ))}
@@ -99,10 +107,10 @@ export function TicketPicker({ offered, min, onConfirm, busy, onPreview, onAdvic
                 const a = onAdvice();
                 setKeep(a.keep);
                 setAdvice(a.reasons);
-                onPreview(a.keep.flatMap((k) => [TICKET_BY_ID[k].a, TICKET_BY_ID[k].b]));
+                onPreview(cities(a.keep));
               }}
             >
-              🧑‍✈️ Demander conseil au chef de gare
+              {t('picker.askAdvice')}
             </button>
           )}
         </div>
@@ -110,13 +118,13 @@ export function TicketPicker({ offered, min, onConfirm, busy, onPreview, onAdvic
       <div className="ticket-grid">
         {offered.map((id) => (
           <div key={id} className={`ticket-choice ${keep.includes(id) ? 'is-on' : ''}`}>
-            <TicketCard id={id} onClick={() => toggle(id)} selected={keep.includes(id)} />
+            <TicketCard map={map} id={id} onClick={() => toggle(id)} selected={keep.includes(id)} />
             <span className="ticket-choice__check">{keep.includes(id) ? '✓' : ''}</span>
           </div>
         ))}
       </div>
       <button type="button" className="btn btn--primary btn--block" disabled={!ok || busy} onClick={() => onConfirm(keep)}>
-        Garder {keep.length} destination{keep.length > 1 ? 's' : ''}
+        {t('picker.keep', { n: keep.length })}
       </button>
     </Sheet>
   );
@@ -133,6 +141,7 @@ export function Sheet({
   children: React.ReactNode;
   onClose?: () => void;
 }) {
+  const { t } = useT();
   const ref = useRef<HTMLDivElement>(null);
   useFocusTrap(ref, onClose);
   return (
@@ -162,7 +171,7 @@ export function Sheet({
             {subtitle && <p className="sheet__subtitle">{subtitle}</p>}
           </div>
           {onClose && (
-            <button type="button" className="icon-btn" onClick={onClose} aria-label="Fermer">
+            <button type="button" className="icon-btn" onClick={onClose} aria-label={t('common.close')}>
               ✕
             </button>
           )}

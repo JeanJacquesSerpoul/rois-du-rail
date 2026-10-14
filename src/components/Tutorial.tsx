@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import type { GameState } from '../../shared/types';
+import { useT } from '../lib/i18n';
 
 /**
  * Partie guidée : le chef de gare accompagne une vraie partie, étape par étape.
@@ -52,8 +53,8 @@ export interface CoachContext {
 }
 
 interface Step {
-  title: string;
-  text: string;
+  /** Clé de traduction : `tutorial.<id>.title` et `tutorial.<id>.text`. */
+  id: 'tickets' | 'draw' | 'wait' | 'plans' | 'claim' | 'advisor' | 'end';
   done?: (c: CoachContext, since: number) => boolean;
 }
 
@@ -61,43 +62,17 @@ const mine = (c: CoachContext, since: number, kinds: string[]) =>
   c.state.events.some((e) => e.seq > since && e.seat === c.viewer && kinds.includes(e.kind));
 
 const STEPS: Step[] = [
-  {
-    title: 'Vos destinations',
-    text: 'Bienvenue ! Chaque billet relie deux villes. Gardez-en au moins 2 : un billet réalisé rapporte ses points, sinon il les fait perdre. Essayez « Demander conseil au chef de gare ».',
-    done: (c) => c.state.phase !== 'setup',
-  },
-  {
-    title: 'Piocher des cartes',
-    text: 'À votre tour, prenez 2 cartes Wagon : touchez une carte visible du marché ou la pioche cachée (le paquet bleu).',
-    done: (c, since) => mine(c, since, ['drawFaceUp', 'drawDeck']) && c.state.current !== c.viewer,
-  },
-  {
-    title: 'Le tour des autres',
-    text: 'L’ordinateur joue à son tour : ses actions s’affichent en haut de l’écran. Patientez un instant…',
-    done: (c) => c.myTurn,
-  },
-  {
-    title: 'Vos trajets',
-    text: 'Touchez « 🎫 Trajets » en bas de la carte : le chemin conseillé pour chaque destination s’affiche en pointillés dorés.',
-    done: (c) => c.plansShown,
-  },
-  {
-    title: 'Prendre une route',
-    text: 'Quand vous avez assez de cartes de la bonne couleur, une route scintille : touchez-la puis choisissez comment payer. Pas encore ? Piochez de nouveau.',
-    done: (c, since) => mine(c, since, ['claimRoute']),
-  },
-  {
-    title: 'Le chef de gare',
-    text: 'Bravo, première route posée ! Si vous hésitez, touchez « 🧑‍✈️ Chef de gare » : je vous propose un coup et je vous explique pourquoi.',
-    done: (c) => c.adviceOpened,
-  },
-  {
-    title: 'À vous de jouer',
-    text: 'Vous connaissez l’essentiel ! Reliez vos destinations avant que les wagons ne s’épuisent : quand un joueur n’en a plus que 2, chacun joue un dernier tour. Bonne route !',
-  },
+  { id: 'tickets', done: (c) => c.state.phase !== 'setup' },
+  { id: 'draw', done: (c, since) => mine(c, since, ['drawFaceUp', 'drawDeck']) && c.state.current !== c.viewer },
+  { id: 'wait', done: (c) => c.myTurn },
+  { id: 'plans', done: (c) => c.plansShown },
+  { id: 'claim', done: (c, since) => mine(c, since, ['claimRoute']) },
+  { id: 'advisor', done: (c) => c.adviceOpened },
+  { id: 'end' },
 ];
 
 export function Coach(ctx: CoachContext & { gameId: number }) {
+  const { t } = useT();
   const [saved, setSaved] = useState<TutorialSave | null>(() => load());
   const [collapsed, setCollapsed] = useState(false);
   const active = saved && saved.gameId === ctx.gameId && saved.step < STEPS.length;
@@ -134,27 +109,25 @@ export function Coach(ctx: CoachContext & { gameId: number }) {
         type="button"
         className="coach__avatar"
         onClick={() => setCollapsed((v) => !v)}
-        aria-label={collapsed ? 'Afficher le conseil' : 'Réduire le conseil'}
+        aria-label={collapsed ? t('tutorial.expand') : t('tutorial.collapse')}
       >
         🧑‍✈️
       </button>
       {!collapsed && (
         <div className="coach__body">
           <div className="coach__head">
-            <b>{step.title}</b>
-            <span>
-              Étape {saved.step + 1}/{STEPS.length}
-            </span>
+            <b>{t(`tutorial.${step.id}.title`)}</b>
+            <span>{t('tutorial.step', { n: saved.step + 1, total: STEPS.length })}</span>
           </div>
-          <p>{step.text}</p>
+          <p>{t(`tutorial.${step.id}.text`)}</p>
           <div className="coach__actions">
             {step.done ? (
               <button type="button" className="coach__link" onClick={finish}>
-                Quitter la partie guidée
+                {t('tutorial.quit')}
               </button>
             ) : (
               <button type="button" className="btn btn--primary coach__done" onClick={finish}>
-                Terminer la partie guidée
+                {t('tutorial.finish')}
               </button>
             )}
           </div>

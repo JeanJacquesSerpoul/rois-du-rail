@@ -1,10 +1,13 @@
 import { animate, AnimatePresence, motion, useMotionValue, useTransform } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CITY_BY_ID, FRANCE_PATH, MAP_HEIGHT, MAP_WIDTH, ROUTES, TICKETS } from '../../shared/map';
+import { franceMap as FR } from '../../shared/maps/france';
 import type { CardColor } from '../../shared/types';
 import { markIntroSeen as markSeen } from '../lib/intro';
 import { setPref, usePref } from '../lib/prefs';
+import { useT } from '../lib/i18n';
 import { useFocusTrap } from '../lib/useFocusTrap';
+import type { Lang } from '../../shared/i18n';
+import type { MessageKey } from '../../shared/i18n/fr';
 import { CARD_FILL, PLAYER_FILL, ROUTE_FILL } from '../lib/theme';
 import { TicketCard } from './Tickets';
 import { TrainCard, WagonIcon } from './TrainCard';
@@ -17,10 +20,11 @@ import { TrainCard, WagonIcon } from './TrainCard';
 // ---------------------------------------------------------------- scènes
 
 function SceneTitle() {
+  const { t } = useT();
   return (
     <div className="iv-scene iv-title">
       <motion.p className="iv-kicker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        Compagnie des chemins de fer de France
+        {t('home.kicker')}
       </motion.p>
       <motion.h2
         className="iv-logo"
@@ -51,22 +55,25 @@ function SceneTitle() {
 }
 
 const MAP_CITIES = ['bre', 'lil', 'str', 'par', 'nts', 'lyo', 'bdx', 'tls', 'mrs', 'nic', 'dij', 'ren'];
-const MAP_ROUTE_IDS = ROUTES.filter((r) =>
-  [
-    ['par', 'lyo'],
-    ['bdx', 'tls'],
-    ['ren', 'nts'],
-    ['mrs', 'nic'],
-    ['par', 'dij'],
-  ].some(([a, b]) => (r.a === a && r.b === b) || (r.a === b && r.b === a)),
-).filter((r, i, all) => all.findIndex((o) => o.a === r.a && o.b === r.b) === i);
+const MAP_ROUTE_IDS = FR.routes
+  .filter((r) =>
+    [
+      ['par', 'lyo'],
+      ['bdx', 'tls'],
+      ['ren', 'nts'],
+      ['mrs', 'nic'],
+      ['par', 'dij'],
+    ].some(([a, b]) => (r.a === a && r.b === b) || (r.a === b && r.b === a)),
+  )
+  .filter((r, i, all) => all.findIndex((o) => o.a === r.a && o.b === r.b) === i);
 
 function SceneMap() {
+  const { t } = useT();
   return (
     <div className="iv-scene iv-split">
-      <svg viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} className="iv-map" aria-hidden>
+      <svg viewBox={`0 0 ${FR.width} ${FR.height}`} className="iv-map" aria-hidden>
         <motion.path
-          d={FRANCE_PATH}
+          d={FR.landPaths[0]}
           fill="#f6ebcf"
           stroke="#c9a227"
           strokeWidth="6"
@@ -75,8 +82,8 @@ function SceneMap() {
           transition={{ pathLength: { duration: 1.8 }, fillOpacity: { delay: 1.2, duration: 0.8 } }}
         />
         {MAP_ROUTE_IDS.map((r, i) => {
-          const a = CITY_BY_ID[r.a];
-          const b = CITY_BY_ID[r.b];
+          const a = FR.cityById[r.a];
+          const b = FR.cityById[r.b];
           return (
             <motion.line
               key={r.id}
@@ -95,7 +102,7 @@ function SceneMap() {
           );
         })}
         {MAP_CITIES.map((id, i) => {
-          const c = CITY_BY_ID[id];
+          const c = FR.cityById[id];
           return (
             <motion.circle
               key={id}
@@ -115,10 +122,10 @@ function SceneMap() {
       </svg>
       <div className="iv-side">
         <motion.div className="iv-big" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }}>
-          🎯 Le but
+          {t('intro.goal')}
         </motion.div>
         <motion.p className="iv-text" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
-          Relier les villes de France avec vos trains et marquer <b>le plus de points</b>.
+          {t('intro.goalText')} <b>{t('intro.goalBold')}</b>.
         </motion.p>
       </div>
     </div>
@@ -128,10 +135,11 @@ function SceneMap() {
 const FAN: CardColor[] = ['red', 'blue', 'yellow', 'green', 'loco'];
 
 function SceneCards() {
+  const { t } = useT();
   return (
     <div className="iv-scene iv-center">
       <motion.div className="iv-step" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        Action 1 · Piocher 2 cartes
+        {t('intro.action1')}
       </motion.div>
       <div className="iv-fan">
         {FAN.map((c, i) => (
@@ -152,18 +160,19 @@ function SceneCards() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 2.4, type: 'spring' }}
       >
-        🌈 La locomotive remplace n'importe quelle couleur
+        {t('intro.locoCallout')}
       </motion.div>
     </div>
   );
 }
 
 function SceneClaim() {
+  const { t } = useT();
   const slots = 4;
   return (
     <div className="iv-scene iv-center">
       <motion.div className="iv-step" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        Action 2 · Prendre une route
+        {t('intro.action2')}
       </motion.div>
       <div className="iv-route">
         <span className="iv-city">Paris</span>
@@ -217,10 +226,11 @@ const POINTS: [number, number][] = [
 ];
 
 function ScenePoints() {
+  const { t } = useT();
   return (
     <div className="iv-scene iv-center">
       <motion.div className="iv-step" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        Plus la route est longue, plus elle rapporte
+        {t('intro.longer')}
       </motion.div>
       <div className="iv-bars">
         {POINTS.map(([len, pts], i) => (
@@ -247,18 +257,19 @@ function ScenePoints() {
           </div>
         ))}
       </div>
-      <p className="iv-legend">wagons → points</p>
+      <p className="iv-legend">{t('intro.legend')}</p>
     </div>
   );
 }
 
-const DEMO_TICKET = TICKETS.find((t) => t.a === 'par' && t.b === 'nic')!;
+const DEMO_TICKET = FR.tickets.find((t) => t.a === 'par' && t.b === 'nic')!;
 
 function SceneTickets() {
+  const { t } = useT();
   return (
     <div className="iv-scene iv-center">
       <motion.div className="iv-step" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        Action 3 · Piocher des destinations
+        {t('intro.action3')}
       </motion.div>
       <motion.div
         className="iv-ticket"
@@ -266,7 +277,7 @@ function SceneTickets() {
         animate={{ rotateY: 0, opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.6 }}
       >
-        <TicketCard id={DEMO_TICKET.id} />
+        <TicketCard map={FR} id={DEMO_TICKET.id} />
       </motion.div>
       <div className="iv-outcomes">
         <motion.div
@@ -275,7 +286,7 @@ function SceneTickets() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 2 }}
         >
-          ✓ Villes reliées
+          {t('intro.linked')}
           <b>+{DEMO_TICKET.points}</b>
         </motion.div>
         <motion.div
@@ -284,7 +295,7 @@ function SceneTickets() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 3.2 }}
         >
-          ✗ Pas reliées
+          {t('intro.notLinked')}
           <b>−{DEMO_TICKET.points}</b>
         </motion.div>
       </div>
@@ -293,6 +304,7 @@ function SceneTickets() {
 }
 
 function SceneEnd() {
+  const { t } = useT();
   const wagons = useMotionValue(45);
   const shown = useTransform(wagons, (v) => Math.round(v));
   useEffect(() => {
@@ -306,7 +318,7 @@ function SceneEnd() {
           <WagonIcon color="#f3e9d2" />
         </span>
         <motion.span className="iv-counter__num">{shown}</motion.span>
-        <span className="iv-counter__label">wagons</span>
+        <span className="iv-counter__label">{t('intro.wagons')}</span>
       </div>
       <motion.div
         className="iv-banner"
@@ -314,16 +326,17 @@ function SceneEnd() {
         animate={{ scale: 1, rotate: -3 }}
         transition={{ delay: 3.3, type: 'spring', stiffness: 260, damping: 12 }}
       >
-        Dernier tour !
+        {t('intro.lastRound')}
       </motion.div>
       <motion.div className="iv-medal" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 5 }}>
-        🏅 Plus long trajet continu : <b>+10 points</b>
+        {t('intro.longest')} <b>+10 points</b>
       </motion.div>
     </div>
   );
 }
 
 function SceneOutro({ onFinish }: { onFinish: () => void }) {
+  const { t } = useT();
   return (
     <div className="iv-scene iv-center iv-outro">
       <motion.div
@@ -340,7 +353,7 @@ function SceneOutro({ onFinish }: { onFinish: () => void }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
       >
-        À vous de jouer !
+        {t('intro.yourTurn')}
       </motion.h2>
       <motion.button
         type="button"
@@ -350,80 +363,42 @@ function SceneOutro({ onFinish }: { onFinish: () => void }) {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 1.2, type: 'spring' }}
       >
-        En voiture !
+        {t('setup.start')}
       </motion.button>
     </div>
   );
 }
 
 interface Chapter {
-  title: string;
-  caption: string;
   render: (finish: () => void) => React.ReactNode;
 }
 
+/** Huit chapitres : titres et sous-titres dans le dictionnaire (`intro.t0`…, `intro.c0`…). */
 const CHAPTERS: Chapter[] = [
-  {
-    title: 'Bienvenue',
-    caption: 'Bienvenue à bord ! Dans Rois du Rail, vous bâtissez votre réseau de chemin de fer à travers la France.',
-    render: () => <SceneTitle />,
-  },
-  {
-    title: 'Le but',
-    caption: 'Votre but : relier les villes avec vos trains pour marquer le plus de points possible.',
-    render: () => <SceneMap />,
-  },
-  {
-    title: 'Les cartes',
-    caption:
-      'À votre tour, vous faites une seule action. Par exemple, piocher deux cartes Wagon. La locomotive multicolore remplace n’importe quelle couleur.',
-    render: () => <SceneCards />,
-  },
-  {
-    title: 'Les routes',
-    caption:
-      'Pour prendre une route, défaussez autant de cartes de sa couleur que sa longueur. Vos wagons s’y installent et vous marquez des points.',
-    render: () => <SceneClaim />,
-  },
-  {
-    title: 'Les points',
-    caption: 'Plus la route est longue, plus elle rapporte : une route de six wagons vaut quinze points !',
-    render: () => <ScenePoints />,
-  },
-  {
-    title: 'Destinations',
-    caption:
-      'Les billets de destination rapportent gros si vous reliez les deux villes. Attention : un billet non réalisé fait perdre ses points.',
-    render: () => <SceneTickets />,
-  },
-  {
-    title: 'Fin',
-    caption:
-      'Quand un joueur n’a plus que deux wagons, chacun joue un dernier tour. Le plus long trajet continu gagne dix points de bonus.',
-    render: () => <SceneEnd />,
-  },
-  {
-    title: 'À vous',
-    caption: 'C’est parti ! Touchez les routes de la carte pour les prendre. Bon voyage !',
-    render: (finish) => <SceneOutro onFinish={finish} />,
-  },
+  { render: () => <SceneTitle /> },
+  { render: () => <SceneMap /> },
+  { render: () => <SceneCards /> },
+  { render: () => <SceneClaim /> },
+  { render: () => <ScenePoints /> },
+  { render: () => <SceneTickets /> },
+  { render: () => <SceneEnd /> },
+  { render: (finish) => <SceneOutro onFinish={finish} /> },
 ];
 
 /** Durée d'un chapitre : le temps de lire (ou d'entendre) le sous-titre, avec un minimum. */
-const durationOf = (c: Chapter) => Math.max(6, c.caption.length / 14 + 2);
-const DURATIONS = CHAPTERS.map(durationOf);
-const TOTAL = DURATIONS.reduce((a, b) => a + b, 0);
+const durationOf = (caption: string) => Math.max(6, caption.length / 14 + 2);
 
 // ---------------------------------------------------------------- voix off
 
-function useVoice(enabled: boolean) {
+function useVoice(enabled: boolean, lang: Lang) {
   const supported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
   useEffect(() => {
     if (!supported) return;
     const pick = () => {
-      const voices = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith('fr'));
-      voiceRef.current = voices.find((v) => /natural|google|amélie|thomas|denise|henri/i.test(v.name)) ?? voices[0] ?? null;
+      const voices = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(lang));
+      voiceRef.current =
+        voices.find((v) => /natural|google|amélie|thomas|denise|henri|sonia|libby|ryan/i.test(v.name)) ?? voices[0] ?? null;
     };
     pick();
     speechSynthesis.addEventListener('voiceschanged', pick);
@@ -431,7 +406,7 @@ function useVoice(enabled: boolean) {
       speechSynthesis.removeEventListener('voiceschanged', pick);
       speechSynthesis.cancel();
     };
-  }, [supported]);
+  }, [supported, lang]);
 
   const say = useCallback(
     (text: string) => {
@@ -439,12 +414,12 @@ function useVoice(enabled: boolean) {
       speechSynthesis.cancel();
       if (!enabled) return;
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'fr-FR';
+      u.lang = lang === 'fr' ? 'fr-FR' : 'en-GB';
       u.rate = 1.05;
       if (voiceRef.current) u.voice = voiceRef.current;
       speechSynthesis.speak(u);
     },
-    [enabled, supported],
+    [enabled, supported, lang],
   );
   const pause = useCallback(() => supported && speechSynthesis.pause(), [supported]);
   const resume = useCallback(() => supported && speechSynthesis.resume(), [supported]);
@@ -460,7 +435,12 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
   const [chapter, setChapter] = useState(0);
   const [elapsed, setElapsed] = useState(0); // secondes écoulées dans le chapitre
   const voiceOn = usePref('introVoice');
-  const voice = useVoice(voiceOn);
+  const { t, lang } = useT();
+  const voice = useVoice(voiceOn, lang);
+  const captions = useMemo(() => CHAPTERS.map((_, i) => t(`intro.c${i}` as MessageKey)), [t]);
+  const titles = useMemo(() => CHAPTERS.map((_, i) => t(`intro.t${i}` as MessageKey)), [t]);
+  const DURATIONS = useMemo(() => captions.map(durationOf), [captions]);
+  const TOTAL = DURATIONS.reduce((a, b) => a + b, 0);
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(dialogRef); // Échap est déjà géré par le lecteur
 
@@ -474,23 +454,23 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
     (i: number) => {
       setChapter(i);
       setElapsed(0);
-      voice.say(CHAPTERS[i].caption);
+      voice.say(captions[i]);
     },
-    [voice],
+    [voice, captions],
   );
 
   // horloge du lecteur (setInterval plutôt que requestAnimationFrame : continue même si l'onglet ralentit)
   useEffect(() => {
     if (!playing) return;
-    const t = setInterval(() => setElapsed((e) => e + 0.1), 100);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setElapsed((e) => e + 0.1), 100);
+    return () => clearInterval(timer);
   }, [playing]);
 
   useEffect(() => {
     if (elapsed < DURATIONS[chapter]) return;
     if (chapter < CHAPTERS.length - 1) goTo(chapter + 1);
     else setPlaying(false); // dernier chapitre : on reste sur « À vous de jouer »
-  }, [elapsed, chapter, goTo]);
+  }, [elapsed, chapter, goTo, DURATIONS]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -529,11 +509,11 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
   // relance la phrase courante quand on réactive la voix
   const prevVoice = useRef(voiceOn);
   useEffect(() => {
-    if (voiceOn && !prevVoice.current && playing) voice.say(CHAPTERS[chapter].caption);
+    if (voiceOn && !prevVoice.current && playing) voice.say(captions[chapter]);
     prevVoice.current = voiceOn;
-  }, [voiceOn, playing, chapter, voice]);
+  }, [voiceOn, playing, chapter, voice, captions]);
 
-  const before = useMemo(() => DURATIONS.slice(0, chapter).reduce((a, b) => a + b, 0), [chapter]);
+  const before = useMemo(() => DURATIONS.slice(0, chapter).reduce((a, b) => a + b, 0), [chapter, DURATIONS]);
   const remaining = Math.max(0, Math.ceil(TOTAL - before - elapsed));
 
   return (
@@ -543,16 +523,16 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
         className="intro"
         role="dialog"
         aria-modal="true"
-        aria-label="Présentation du jeu"
+        aria-label={t('intro.label')}
         initial={{ scale: 0.9, y: 20, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 28 }}
       >
         <div className="intro__head">
-          <span className="intro__title">🎬 Découvrir le jeu</span>
+          <span className="intro__title">{t('intro.header')}</span>
           <button type="button" className="intro__skip" onClick={close}>
-            {chapter === CHAPTERS.length - 1 ? 'Fermer' : 'Passer'} ✕
+            {chapter === CHAPTERS.length - 1 ? t('common.close') : t('common.skip')} ✕
           </button>
         </div>
 
@@ -578,15 +558,13 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
               <span className="intro__play" aria-hidden>
                 ▶
               </span>
-              <span className="intro__hint">
-                Les règles en {Math.round(TOTAL / 60)} minute{TOTAL >= 90 ? 's' : ''} · touchez pour lancer
-              </span>
+              <span className="intro__hint">{t('intro.hint', { n: Math.max(1, Math.round(TOTAL / 60)) })}</span>
             </button>
           )}
         </div>
 
         <p className="intro__caption" aria-live="polite">
-          {started ? CHAPTERS[chapter].caption : 'Une courte présentation animée pour apprendre à jouer.'}
+          {started ? captions[chapter] : t('intro.poster')}
         </p>
 
         <div className="intro__controls">
@@ -594,14 +572,14 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
             type="button"
             className="intro__btn"
             onClick={started ? togglePlay : start}
-            aria-label={playing ? 'Pause' : 'Lecture'}
+            aria-label={playing ? t('intro.pause') : t('intro.play')}
           >
             {playing ? '❚❚' : '▶'}
           </button>
           <div className="intro__chapters">
-            {CHAPTERS.map((c, i) => (
+            {CHAPTERS.map((_, i) => (
               <button
-                key={c.title}
+                key={i}
                 type="button"
                 className="intro__chapter"
                 style={{ flexGrow: DURATIONS[i] }}
@@ -610,8 +588,8 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
                   setPlaying(true);
                   goTo(i);
                 }}
-                aria-label={`Chapitre ${i + 1} : ${c.title}`}
-                title={c.title}
+                aria-label={t('intro.chapter', { n: i + 1, title: titles[i] })}
+                title={titles[i]}
               >
                 <span
                   className="intro__chapter-fill"
@@ -631,8 +609,8 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
               className={`intro__btn ${voiceOn ? '' : 'is-off'}`}
               onClick={toggleVoice}
               aria-pressed={voiceOn}
-              aria-label={voiceOn ? 'Couper la voix off' : 'Activer la voix off'}
-              title={voiceOn ? 'Couper la voix off' : 'Activer la voix off'}
+              aria-label={voiceOn ? t('intro.voiceOff') : t('intro.voiceOn')}
+              title={voiceOn ? t('intro.voiceOff') : t('intro.voiceOn')}
             >
               {voiceOn ? '🔊' : '🔈'}
             </button>

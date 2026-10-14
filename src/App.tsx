@@ -1,10 +1,12 @@
 import { AnimatePresence } from 'motion/react';
 import { Suspense, lazy, useEffect, useState } from 'react';
+import type { MapId } from '../shared/maps';
 import type { PlayerConfig } from '../shared/types';
 import { Game } from './components/Game';
 import { Home, Setup } from './components/Screens';
 import { startTutorial } from './components/Tutorial';
 import { api } from './lib/api';
+import { currentT } from './lib/i18n';
 import { introSeen } from './lib/intro';
 
 // présentation chargée à la demande (première visite ou bouton de l'accueil)
@@ -34,14 +36,14 @@ export default function App() {
     location.hash = hash;
   };
 
-  const start = async (players: PlayerConfig[]) => {
-    const { id } = await api.createGame(players);
+  const start = async (players: PlayerConfig[], mapId: MapId) => {
+    const { id } = await api.createGame(players, mapId);
     go(`#/partie/${id}`);
   };
 
   /** Partie guidée : une vraie partie contre un ordinateur facile, commentée par le chef de gare. */
   const tutorial = async () => {
-    let name = 'Vous';
+    let name = currentT()('setup.you');
     try {
       name = localStorage.getItem('rdr.name') || name;
     } catch {
