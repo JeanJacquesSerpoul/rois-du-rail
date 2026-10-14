@@ -6,6 +6,7 @@ import type { BotLevel, PlayerColor, PlayerConfig } from '../../shared/types';
 import { OFFLINE, api, type GameSummary, type LeaderRow } from '../lib/api';
 import { PLAYER_COLOR_NAMES, PLAYER_FILL } from '../lib/theme';
 import { ConfirmDialog } from './ConfirmDialog';
+import { AnimToggle } from './AnimToggle';
 import { MusicToggle } from './MusicToggle';
 import { Sheet } from './Tickets';
 import { TrainCard, WagonIcon } from './TrainCard';
@@ -69,7 +70,10 @@ export function Home({ onNew, onOpen, onIntro }: { onNew: () => void; onOpen: (i
   return (
     <div className="home">
       <div className="home__sky" />
-      <MusicToggle className="home__music" />
+      <div className="home__toggles">
+        <AnimToggle />
+        <MusicToggle />
+      </div>
       <header className="home__hero">
         <motion.p className="home__kicker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           Compagnie des chemins de fer de France

@@ -202,11 +202,13 @@ input {
   animation: puff 1.2s infinite;
 }
 
-.home__music {
+.home__toggles {
   position: absolute;
   top: calc(12px + var(--safe-t));
   right: 12px;
   z-index: 2;
+  display: flex;
+  gap: 8px;
 }
 
 /* ------------------------------------------------------------------ accueil */
