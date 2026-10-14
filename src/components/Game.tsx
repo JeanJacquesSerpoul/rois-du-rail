@@ -9,6 +9,7 @@ import { PLAYER_FILL } from '../lib/theme';
 import { AdvisorSheet } from './Advisor';
 import { AnimToggle, useClaimAnim } from './AnimToggle';
 import { Board, travelTime } from './Board';
+import { EndCinematic } from './EndCinematic';
 import { EndScreen } from './EndScreen';
 import { MusicToggle } from './MusicToggle';
 import { ClaimSheet, EventLog, HandView, Market, PlayersBar, TicketsSheet, Toasts } from './Panels';
@@ -30,6 +31,9 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   const [flashRoute, setFlashRoute] = useState<number | null>(null);
   const claimAnim = useClaimAnim();
   const [showEnd, setShowEnd] = useState(true);
+  // séquence spectaculaire quand la partie se termine sous nos yeux
+  const [cinematic, setCinematic] = useState(false);
+  const prevPhase = useRef<GameState['phase'] | null>(null);
   // chef de gare : conseil affiché dans sa fenêtre, puis gardé en surbrillance jusqu'au prochain coup
   const [advice, setAdvice] = useState<Advice | null>(null);
   const [hint, setHint] = useState<Advice | null>(null);
@@ -38,6 +42,8 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   const receive = useCallback((next: GameState, initial = false) => {
     const fresh = initial ? [] : next.events.filter((e) => e.seq > lastSeq.current);
     lastSeq.current = next.eventSeq;
+    if (!initial && prevPhase.current !== 'finished' && next.phase === 'finished') setCinematic(true);
+    prevPhase.current = next.phase;
     setState(next);
     setHint(null);
     setAdvice(null);
@@ -327,8 +333,25 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
             <span className="pass-device__hint">Passez l'appareil, puis touchez l'écran pour révéler votre main.</span>
           </motion.button>
         )}
-        {state.phase === 'finished' && showEnd && (
-          <EndScreen state={state} onClose={() => setShowEnd(false)} onHome={onExit} onNewGame={onNewGame} />
+        {state.phase === 'finished' && cinematic && (
+          <EndCinematic
+            key="cinematic"
+            state={state}
+            onDone={() => {
+              setCinematic(false);
+              setShowEnd(true);
+            }}
+          />
+        )}
+        {state.phase === 'finished' && showEnd && !cinematic && (
+          <EndScreen
+            key="end"
+            state={state}
+            onClose={() => setShowEnd(false)}
+            onHome={onExit}
+            onNewGame={onNewGame}
+            onReplay={() => setCinematic(true)}
+          />
         )}
       </AnimatePresence>
     </div>

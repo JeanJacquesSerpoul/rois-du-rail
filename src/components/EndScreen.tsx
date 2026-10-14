@@ -41,9 +41,10 @@ interface Props {
   onClose: () => void;
   onHome: () => void;
   onNewGame: () => void;
+  onReplay?: () => void;
 }
 
-export function EndScreen({ state, onClose, onHome, onNewGame }: Props) {
+export function EndScreen({ state, onClose, onHome, onNewGame, onReplay }: Props) {
   const results = [...(state.results ?? [])].sort((a, b) => a.rank - b.rank);
   const winner = results[0];
   return (
@@ -99,6 +100,11 @@ export function EndScreen({ state, onClose, onHome, onNewGame }: Props) {
         </div>
 
         <div className="end__actions">
+          {onReplay && (
+            <button type="button" className="btn" onClick={onReplay}>
+              🎆 Revoir le final
+            </button>
+          )}
           <button type="button" className="btn" onClick={onClose}>
             Voir la carte
           </button>

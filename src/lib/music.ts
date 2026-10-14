@@ -217,6 +217,28 @@ class MusicPlayer {
     if (this.playing) this.stop();
     else void this.start();
   }
+
+  /** Petite fanfare de victoire, jouée par-dessus la musique si elle est activée. */
+  fanfare() {
+    if (!this.playing || !this.ctx || !this.master) return;
+    const ctx = this.ctx;
+    const t0 = ctx.currentTime + 0.05;
+    const notes: [number, number, number][] = [
+      // [note MIDI, début en temps, durée en temps]
+      [67, 0, 0.5],
+      [72, 0.5, 0.5],
+      [76, 1, 0.5],
+      [79, 1.5, 0.75],
+      [76, 2.25, 0.25],
+      [79, 2.5, 2.5],
+      [72, 2.5, 2.5],
+      [76, 2.5, 2.5],
+      [48, 2.5, 2.5],
+    ];
+    for (const [midi, start, dur] of notes) {
+      this.play({ beat: 0, midi, dur, voice: midi < 60 ? 'bass' : 'lead', gain: midi < 60 ? 0.6 : 0.45 }, t0 + start * BEAT * 0.6);
+    }
+  }
 }
 
 export const music = new MusicPlayer();
