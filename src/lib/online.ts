@@ -63,9 +63,24 @@ export function identityOf(code: string): RoomIdentity | null {
   return loadIds()[code] ?? null;
 }
 
+/** Salons connus de cet appareil (créés ou rejoints), du plus récent au plus ancien. */
+export function listIdentities(): RoomIdentity[] {
+  return Object.values(loadIds()).sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
+}
+
+export function forgetIdentity(code: string) {
+  const ids = loadIds();
+  delete ids[code];
+  try {
+    localStorage.setItem(IDS_KEY, JSON.stringify(ids));
+  } catch {
+    /* stockage indisponible */
+  }
+}
+
 function saveIdentity(id: RoomIdentity) {
   try {
-    localStorage.setItem(IDS_KEY, JSON.stringify({ ...loadIds(), [id.code]: id }));
+    localStorage.setItem(IDS_KEY, JSON.stringify({ ...loadIds(), [id.code]: { ...id, at: Date.now() } }));
   } catch {
     /* navigation privée : l'identité reste valable le temps de la page */
   }

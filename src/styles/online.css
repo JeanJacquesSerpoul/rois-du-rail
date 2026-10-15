@@ -66,80 +66,6 @@
   padding: 6px 10px;
 }
 
-/* accueil : jouer en ligne (créer ou rejoindre un salon) */
-.home__online {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(231, 204, 110, 0.4);
-}
-
-.home__online h2 {
-  margin: 0;
-  font-family: var(--display);
-  font-size: 1.2rem;
-  color: var(--brass-2);
-}
-
-.home__online > p {
-  margin: 0;
-  font-size: 0.88rem;
-  line-height: 1.4;
-  color: #c7d0dd;
-}
-
-.home__or {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.8rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: #aab6c8;
-}
-
-.home__or::before,
-.home__or::after {
-  content: "";
-  flex: 1;
-  border-top: 1px dashed rgba(170, 182, 200, 0.5);
-}
-
-/* rejoindre avec un code */
-.home__join {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px 10px;
-  align-items: center;
-}
-
-.home__join label {
-  grid-column: 1 / -1;
-  color: var(--cream);
-  font-weight: 700;
-  font-size: 0.88rem;
-}
-
-.home__join input {
-  min-width: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 2px solid transparent;
-  background: var(--cream);
-  color: var(--ink);
-  font-weight: 800;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-}
-
-.home__join input:focus {
-  outline: none;
-  border-color: var(--brass);
-}
-
 .game-row__online {
   color: #1c3f8f;
   font-size: 0.8em;
@@ -369,4 +295,105 @@ button.seat-row:disabled {
   .room-btn--offline {
     animation: none;
   }
+}
+
+/* réglages → salons en ligne */
+.settings__rooms {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rooms__block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: #fffaf0;
+  border: 1px solid #e0d1ad;
+  box-shadow: 0 2px 0 #e0d1ad;
+}
+
+.rooms__block h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.05rem;
+}
+
+.rooms__block p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.rooms__code {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.rooms__code input {
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid #d9c79b;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+.rooms__code input:focus {
+  outline: none;
+  border-color: var(--brass);
+}
+
+.rooms__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rooms__list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rooms__open {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid #e0d1ad;
+}
+
+.rooms__open:hover {
+  border-color: var(--brass);
+}
+
+.rooms__open b {
+  letter-spacing: 0.18em;
+}
+
+.rooms__open small {
+  color: var(--ink-soft);
 }

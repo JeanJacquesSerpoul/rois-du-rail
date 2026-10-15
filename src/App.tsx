@@ -83,7 +83,6 @@ export default function App() {
       screen = (
         <Home
           onNew={() => go('#/nouvelle')}
-          onNewOnline={() => go('#/nouveau-salon')}
           onOpen={(id) => go(`#/partie/${id}`)}
           onRoom={(code) => go(`#/salon/${code}`)}
           onIntro={() => setShowIntro(true)}

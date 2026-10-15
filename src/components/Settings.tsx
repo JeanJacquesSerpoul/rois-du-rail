@@ -6,6 +6,7 @@ import { setPref, usePref, type BotSpeed, type MapTheme } from '../lib/prefs';
 import { playSfx } from '../lib/sfx';
 import { useT } from '../lib/i18n';
 import type { Lang } from '../../shared/i18n';
+import { RoomsDialog } from './RoomsDialog';
 import { Sheet } from './Tickets';
 
 const THEMES: MapTheme[] = ['auto', 'day', 'dusk'];
@@ -58,7 +59,7 @@ function Row({ icon, title, hint, children }: { icon: string; title: string; hin
   );
 }
 
-function SettingsSheet({ onClose }: { onClose: () => void }) {
+function SettingsSheet({ onClose, onRooms }: { onClose: () => void; onRooms: () => void }) {
   const [musicOn, setMusicOn] = useState(music.playing || music.wanted);
   useEffect(() => music.subscribe(setMusicOn), []);
   const claimAnim = usePref('claimAnim');
@@ -74,6 +75,11 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
   return (
     <Sheet title={t('settings.title')} subtitle={t('settings.subtitle')} onClose={onClose}>
       <div className="settings">
+        <Row icon="🌐" title={t('settings.rooms')} hint={t('settings.roomsHint')}>
+          <button type="button" className="btn settings__rooms" onClick={onRooms}>
+            {t('settings.roomsOpen')}
+          </button>
+        </Row>
         <div className="settings__row settings__row--block">
           <span className="settings__icon" aria-hidden>
             🌍
@@ -172,14 +178,15 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
 
 /** Bouton ⚙️ qui ouvre les réglages. */
 export function SettingsButton() {
-  const [open, setOpen] = useState(false);
+  // les réglages, puis la gestion des salons ouverte depuis eux
+  const [view, setView] = useState<'settings' | 'rooms' | null>(null);
   const { t } = useT();
   return (
     <>
       <button
         type="button"
         className="music-toggle settings-btn"
-        onClick={() => setOpen(true)}
+        onClick={() => setView('settings')}
         aria-label={t('settings.title')}
         title={t('settings.title')}
       >
@@ -187,7 +194,10 @@ export function SettingsButton() {
       </button>
       {/* hors de la barre du haut, pour passer au-dessus du panneau de jeu */}
       {createPortal(
-        <AnimatePresence>{open && <SettingsSheet key="settings" onClose={() => setOpen(false)} />}</AnimatePresence>,
+        <AnimatePresence>
+          {view === 'settings' && <SettingsSheet key="settings" onClose={() => setView(null)} onRooms={() => setView('rooms')} />}
+          {view === 'rooms' && <RoomsDialog key="rooms" onBack={() => setView('settings')} onClose={() => setView(null)} />}
+        </AnimatePresence>,
         document.body,
       )}
     </>

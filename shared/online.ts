@@ -27,6 +27,8 @@ export interface RoomIdentity {
   role: 'host' | 'guest';
   /** Partie locale de l'hôte (mode pair-à-pair). */
   gameId?: number;
+  /** Dernière utilisation (ms), pour lister les salons du plus récent au plus ancien. */
+  at?: number;
 }
 
 /** Messages du serveur (ou de l'hôte) vers les appareils du salon. */

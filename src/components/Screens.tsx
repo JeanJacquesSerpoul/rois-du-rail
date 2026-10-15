@@ -4,7 +4,6 @@ import { BOT_LEVELS } from '../../shared/bot';
 import { LONGEST_BONUS, ROUTE_POINTS } from '../../shared/engine';
 import { MAP_IDS, MAPS, type MapId, getMap } from '../../shared/maps';
 import type { BotLevel, PlayerColor, PlayerConfig } from '../../shared/types';
-import { isRoomCode } from '../../shared/online';
 import { OFFLINE, api, type GameSummary, type LeaderRow } from '../lib/api';
 import { errorText, useT } from '../lib/i18n';
 import { setPref, usePref } from '../lib/prefs';
@@ -71,14 +70,12 @@ function HeroTrain() {
 
 export function Home({
   onNew,
-  onNewOnline,
   onOpen,
   onRoom,
   onIntro,
   onTutorial,
 }: {
   onNew: () => void;
-  onNewOnline: () => void;
   onOpen: (id: number) => void;
   onRoom: (code: string) => void;
   onIntro: () => void;
@@ -91,7 +88,6 @@ export function Home({
   const [error, setError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<GameSummary | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [joinCode, setJoinCode] = useState('');
   const [profile, setProfile] = useState<string | null>(null);
   const open = (g: GameSummary) => (g.room ? onRoom(g.room) : onOpen(g.id));
 
@@ -191,40 +187,6 @@ export function Home({
             {t('home.ranking')}
           </button>
         </div>
-
-        <section className="home__online" aria-labelledby="online-title">
-          <h2 id="online-title">{t('home.onlineTitle')}</h2>
-          <p>{t('home.onlineHint')}</p>
-          <button type="button" className="btn btn--primary" onClick={onNewOnline}>
-            {t('home.createRoom')}
-          </button>
-          <div className="home__or" aria-hidden>
-            {t('home.or')}
-          </div>
-          <form
-            className="home__join"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const code = joinCode.trim().toUpperCase();
-              if (isRoomCode(code)) onRoom(code);
-            }}
-          >
-            <label htmlFor="join-code">{t('home.joinLabel')}</label>
-            <input
-              id="join-code"
-              value={joinCode}
-              maxLength={6}
-              autoCapitalize="characters"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="ABC234"
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-            />
-            <button type="submit" className="btn" disabled={!isRoomCode(joinCode)}>
-              {t('home.join')}
-            </button>
-          </form>
-        </section>
 
         {error && <p className="home__error">{t('home.serverError', { error })}</p>}
 
