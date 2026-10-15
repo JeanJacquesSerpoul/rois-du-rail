@@ -215,7 +215,6 @@ export function Home({
         </form>
 
         {error && <p className="home__error">{t('home.serverError', { error })}</p>}
-        {OFFLINE && <p className="home__note">{t('home.offlineNote')}</p>}
 
         {ongoing.length > 0 && (
           <section className="home__section">

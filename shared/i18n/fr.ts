@@ -61,8 +61,6 @@ export const fr = {
   'home.rules': '📜 Règles',
   'home.ranking': '🏆 Classement',
   'home.serverError': 'Serveur injoignable : {error}',
-  'home.offlineNote':
-    'Version de démonstration : les parties sont enregistrées dans ce navigateur. La version complète utilise un serveur avec base SQLite.',
   'home.ongoing': 'Parties en cours',
   'home.finished': 'Dernières parties',
   'home.game': 'Partie n°{id}',

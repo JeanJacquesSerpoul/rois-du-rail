@@ -60,7 +60,6 @@ export const en: Record<MessageKey, string> = {
   'home.rules': '📜 Rules',
   'home.ranking': '🏆 Leaderboard',
   'home.serverError': 'Server unreachable: {error}',
-  'home.offlineNote': 'Demo version: games are saved in this browser. The full version uses a server with an SQLite database.',
   'home.ongoing': 'Games in progress',
   'home.finished': 'Recent games',
   'home.game': 'Game #{id}',
