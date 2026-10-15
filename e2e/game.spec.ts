@@ -120,7 +120,9 @@ test.describe('in English', () => {
     await fastPrefs(page);
     await page.goto('/');
     await page.getByRole('button', { name: /New game/ }).click();
-    await page.getByRole('button', { name: /Europe/ }).click();
+    await page.locator('.map-picker__summary').click();
+    await page.getByRole('option', { name: /Europe/ }).click();
+    await expect(page.locator('.map-picker__name')).toHaveText('Europe');
     await page.getByRole('button', { name: '2', exact: true }).click();
     await page.getByRole('button', { name: /All aboard/ }).click();
     await page.getByRole('button', { name: /Keep \d destination/ }).click();

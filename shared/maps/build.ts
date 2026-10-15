@@ -25,6 +25,9 @@ export interface MapSpec {
   id: MapId;
   name: Localized;
   description: Localized;
+  /** Pictogramme et accroche affichés dans le choix de la carte. */
+  emoji: string;
+  tag: Localized;
   /** Projection équirectangulaire corrigée par le cosinus de `refLat`. */
   projection: { lon0: number; lat0: number; scale: number; refLat: number };
   width: number;
@@ -57,6 +60,8 @@ export interface GameMap {
   id: MapId;
   name: Localized;
   description: Localized;
+  emoji: string;
+  tag: Localized;
   width: number;
   height: number;
   wagons: number;
@@ -139,6 +144,8 @@ export function buildMap(spec: MapSpec): GameMap {
     id: spec.id,
     name: spec.name,
     description: spec.description,
+    emoji: spec.emoji,
+    tag: spec.tag,
     width: spec.width,
     height: spec.height,
     wagons: spec.wagons,

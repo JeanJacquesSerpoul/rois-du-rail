@@ -75,6 +75,8 @@ const INLAND: [number, number][] = [
 export const BRETAGNE: MapSpec = {
   id: 'bretagne',
   name: { fr: 'Bretagne', en: 'Brittany' },
+  emoji: '⚓',
+  tag: { fr: 'Partie courte', en: 'Quick game' },
   description: {
     fr: 'Les cinq départements bretons, Loire-Atlantique comprise',
     en: 'The five Breton departments, including Loire-Atlantique',

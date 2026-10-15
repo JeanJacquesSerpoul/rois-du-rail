@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BOT_LEVELS } from '../../shared/bot';
 import { LONGEST_BONUS, ROUTE_POINTS } from '../../shared/engine';
 import { MAP_IDS, MAPS, type MapId, getMap } from '../../shared/maps';
@@ -266,10 +266,10 @@ function GameRow({ game, onOpen, onDelete }: { game: GameSummary; onOpen: (id: n
 }
 
 /** Aperçu d'une carte pour le choix de la partie. */
-function MapPreview({ id }: { id: MapId }) {
+function MapPreview({ id, className = 'map-card__svg' }: { id: MapId; className?: string }) {
   const map = MAPS[id];
   return (
-    <svg viewBox={`0 0 ${map.width} ${map.height}`} className="map-choice__svg" aria-hidden>
+    <svg viewBox={`0 0 ${map.width} ${map.height}`} className={className} preserveAspectRatio="xMidYMid slice" aria-hidden>
       <rect width={map.width} height={map.height} fill="#b9d3d3" />
       {map.neighborPaths.map((d, i) => (
         <path key={`n${i}`} d={d} fill="#e2d6b8" />
@@ -300,6 +300,117 @@ function MapPreview({ id }: { id: MapId }) {
   );
 }
 
+/**
+ * Choix de la carte : un résumé compact de la carte choisie, qui se déplie en
+ * carrousel horizontal de cartes à faire défiler ; le choix replie le carrousel.
+ */
+function MapPicker({ value, onChange }: { value: MapId; onChange: (id: MapId) => void }) {
+  const { t, lang } = useT();
+  const [open, setOpen] = useState(false);
+  const track = useRef<HTMLDivElement>(null);
+  const map = MAPS[value];
+
+  // à l'ouverture, la carte choisie est centrée dans le carrousel
+  useEffect(() => {
+    if (!open) return;
+    const el = track.current?.querySelector<HTMLElement>('.map-card.is-on');
+    el?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [open]);
+
+  const scrollBy = (dir: 1 | -1) => track.current?.scrollBy({ left: dir * 230, behavior: 'smooth' });
+
+  return (
+    <section className={`map-picker ${open ? 'is-open' : ''}`}>
+      <button type="button" className="map-picker__summary" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="map-picker__thumb">
+          <MapPreview id={value} className="map-picker__svg" />
+          <span className="map-picker__emoji" aria-hidden>
+            {map.emoji}
+          </span>
+        </span>
+        <span className="map-picker__info">
+          <span className="map-picker__label">{t('setup.mapLabel', { n: MAP_IDS.length })}</span>
+          <b className="map-picker__name">{map.name[lang]}</b>
+          <small>{t('setup.mapMeta', { n: map.wagons, routes: map.routes.length })}</small>
+        </span>
+        <span className="map-picker__change">
+          {open ? t('setup.mapClose') : t('setup.mapChange')}
+          <span className="map-picker__chevron" aria-hidden>
+            ▾
+          </span>
+        </span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="drawer"
+            className="map-picker__drawer"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+          >
+            <div className="map-picker__track" ref={track} role="listbox" aria-label={t('setup.map')}>
+              {MAP_IDS.map((id, i) => {
+                const m = MAPS[id];
+                const selected = id === value;
+                return (
+                  <motion.button
+                    key={id}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    className={`map-card ${selected ? 'is-on' : ''}`}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05 * i }}
+                    whileHover={{ y: -4 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      onChange(id);
+                      // petit temps pour voir la sélection avant de replier
+                      setTimeout(() => setOpen(false), 280);
+                    }}
+                  >
+                    <span className="map-card__art">
+                      <MapPreview id={id} className="map-card__svg" />
+                      <span className="map-card__tag">
+                        {m.emoji} {m.tag[lang]}
+                      </span>
+                      {selected && (
+                        <span className="map-card__check" aria-hidden>
+                          ✓
+                        </span>
+                      )}
+                    </span>
+                    <span className="map-card__name">{m.name[lang]}</span>
+                    <span className="map-card__desc">{m.description[lang]}</span>
+                    <span className="map-card__meta">
+                      <span>🏙️ {m.cities.length}</span>
+                      <span>🛤️ {m.routes.length}</span>
+                      <span>🚃 {m.wagons}</span>
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </div>
+            <div className="map-picker__nav">
+              <button type="button" className="map-picker__arrow" onClick={() => scrollBy(-1)} aria-label={t('setup.mapPrev')}>
+                ‹
+              </button>
+              <span className="map-picker__hint">{t('setup.mapHint')}</span>
+              <button type="button" className="map-picker__arrow" onClick={() => scrollBy(1)} aria-label={t('setup.mapNext')}>
+                ›
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
 export function Setup({
   onStart,
   onBack,
@@ -307,7 +418,7 @@ export function Setup({
   onStart: (players: PlayerConfig[], mapId: MapId) => Promise<void>;
   onBack: () => void;
 }) {
-  const { t, lang } = useT();
+  const { t } = useT();
   // le dernier niveau choisi sert de niveau par défaut pour les nouveaux ordinateurs
   const [defaultLevel] = useState<BotLevel>(() => {
     const saved = storage('rdr.level', 'normal') as BotLevel;
@@ -381,26 +492,7 @@ export function Setup({
         <h1>{t('setup.title')}</h1>
       </header>
       <div className="setup__body">
-        <fieldset className="map-choices" aria-label={t('setup.map')}>
-          <legend className="setup__label">{t('setup.map')}</legend>
-          {MAP_IDS.map((id) => {
-            const map = MAPS[id];
-            return (
-              <button
-                key={id}
-                type="button"
-                className={`map-choice ${mapId === id ? 'is-on' : ''}`}
-                aria-pressed={mapId === id}
-                onClick={() => setMapId(id)}
-              >
-                <MapPreview id={id} />
-                <span className="map-choice__name">{map.name[lang]}</span>
-                <span className="map-choice__desc">{map.description[lang]}</span>
-                <span className="map-choice__meta">{t('setup.mapMeta', { n: map.wagons, routes: map.routes.length })}</span>
-              </button>
-            );
-          })}
-        </fieldset>
+        <MapPicker value={mapId} onChange={setMapId} />
         <div className="setup__count">
           <span>{t('setup.players')}</span>
           <div className="segmented">

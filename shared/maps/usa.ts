@@ -195,6 +195,8 @@ const MEXICO: Pts = [
 export const USA_MAP: MapSpec = {
   id: 'usa',
   name: { fr: 'États-Unis', en: 'United States' },
+  emoji: '🗽',
+  tag: { fr: 'D’un océan à l’autre', en: 'Coast to coast' },
   description: {
     fr: '45 villes, de Seattle à Miami et de San Diego à Boston',
     en: '45 cities, from Seattle to Miami and San Diego to Boston',

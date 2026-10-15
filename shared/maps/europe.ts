@@ -230,6 +230,8 @@ const ZEALAND: Pts = [
 export const EUROPE: MapSpec = {
   id: 'europe',
   name: { fr: 'Europe', en: 'Europe' },
+  emoji: '🏰',
+  tag: { fr: 'Grand tour continental', en: 'Continental grand tour' },
   description: {
     fr: '50 capitales et grandes villes, de Lisbonne à Moscou',
     en: '50 capitals and major cities, from Lisbon to Moscow',

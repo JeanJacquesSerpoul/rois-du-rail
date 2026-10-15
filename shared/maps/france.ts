@@ -86,6 +86,8 @@ const OUTLINE: [number, number][] = [
 export const FRANCE: MapSpec = {
   id: 'france',
   name: { fr: 'France', en: 'France' },
+  emoji: '🥖',
+  tag: { fr: 'La classique', en: 'The classic' },
   description: { fr: '44 villes, des Flandres à la Méditerranée', en: '44 cities, from Flanders to the Mediterranean' },
   projection: { lon0: -5.3, lat0: 51.45, scale: 100, refLat: 46.5 },
   width: 935,
