@@ -71,12 +71,14 @@ function HeroTrain() {
 
 export function Home({
   onNew,
+  onNewOnline,
   onOpen,
   onRoom,
   onIntro,
   onTutorial,
 }: {
   onNew: () => void;
+  onNewOnline: () => void;
   onOpen: (id: number) => void;
   onRoom: (code: string) => void;
   onIntro: () => void;
@@ -190,29 +192,39 @@ export function Home({
           </button>
         </div>
 
-        <form
-          className="home__join"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const code = joinCode.trim().toUpperCase();
-            if (isRoomCode(code)) onRoom(code);
-          }}
-        >
-          <label htmlFor="join-code">{t('home.joinLabel')}</label>
-          <input
-            id="join-code"
-            value={joinCode}
-            maxLength={6}
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="ABC234"
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-          />
-          <button type="submit" className="btn" disabled={!isRoomCode(joinCode)}>
-            {t('home.join')}
+        <section className="home__online" aria-labelledby="online-title">
+          <h2 id="online-title">{t('home.onlineTitle')}</h2>
+          <p>{t('home.onlineHint')}</p>
+          <button type="button" className="btn btn--primary" onClick={onNewOnline}>
+            {t('home.createRoom')}
           </button>
-        </form>
+          <div className="home__or" aria-hidden>
+            {t('home.or')}
+          </div>
+          <form
+            className="home__join"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const code = joinCode.trim().toUpperCase();
+              if (isRoomCode(code)) onRoom(code);
+            }}
+          >
+            <label htmlFor="join-code">{t('home.joinLabel')}</label>
+            <input
+              id="join-code"
+              value={joinCode}
+              maxLength={6}
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="ABC234"
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            />
+            <button type="submit" className="btn" disabled={!isRoomCode(joinCode)}>
+              {t('home.join')}
+            </button>
+          </form>
+        </section>
 
         {error && <p className="home__error">{t('home.serverError', { error })}</p>}
 
@@ -473,9 +485,12 @@ function MapPicker({ value, onChange }: { value: MapId; onChange: (id: MapId) =>
 export function Setup({
   onStart,
   onBack,
+  initialOnline = false,
 }: {
   onStart: (players: PlayerConfig[], mapId: MapId, online: boolean) => Promise<void>;
   onBack: () => void;
+  /** Ouvert depuis « Créer un salon » : mode en ligne, avec une place d'invité. */
+  initialOnline?: boolean;
 }) {
   const { t } = useT();
   // le dernier niveau choisi sert de niveau par défaut pour les nouveaux ordinateurs
@@ -489,13 +504,15 @@ export function Setup({
   });
   const [players, setPlayers] = useState<PlayerConfig[]>(() => [
     { name: storage('rdr.name', t('setup.defaultName', { n: 1 })), isBot: false, color: 'crimson', level: defaultLevel },
-    { name: BOT_NAMES[0], isBot: true, color: 'navy', level: defaultLevel },
+    initialOnline
+      ? { name: t('setup.guestName', { n: 2 }), isBot: false, color: 'navy', level: defaultLevel }
+      : { name: BOT_NAMES[0], isBot: true, color: 'navy', level: defaultLevel },
     { name: BOT_NAMES[1], isBot: true, color: 'forest', level: defaultLevel },
   ]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // en ligne : le premier joueur est l'hôte (cet appareil), les autres humains rejoignent par un lien
-  const [online, setOnline] = useState(false);
+  const [online, setOnline] = useState(initialOnline);
 
   const setCount = (n: number) => {
     setPlayers((ps) => {

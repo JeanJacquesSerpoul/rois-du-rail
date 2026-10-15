@@ -14,7 +14,11 @@ import { createRoom } from './lib/online';
 // présentation chargée à la demande (première visite ou bouton de l'accueil)
 const IntroVideo = lazy(() => import('./components/IntroVideo').then((m) => ({ default: m.IntroVideo })));
 
-type Route = { name: 'home' } | { name: 'setup' } | { name: 'game'; id: number } | { name: 'room'; code: string };
+type Route =
+  | { name: 'home' }
+  | { name: 'setup'; online?: boolean }
+  | { name: 'game'; id: number }
+  | { name: 'room'; code: string };
 
 function parseHash(): Route {
   const m = location.hash.match(/^#\/partie\/(\d+)/);
@@ -22,6 +26,7 @@ function parseHash(): Route {
   const room = location.hash.match(/^#\/salon\/([A-Za-z0-9]{6})/);
   if (room) return { name: 'room', code: room[1].toUpperCase() };
   if (location.hash === '#/nouvelle') return { name: 'setup' };
+  if (location.hash === '#/nouveau-salon') return { name: 'setup', online: true };
   return { name: 'home' };
 }
 
@@ -66,7 +71,7 @@ export default function App() {
   let screen: React.ReactNode;
   switch (route.name) {
     case 'setup':
-      screen = <Setup onStart={start} onBack={() => go('#/')} />;
+      screen = <Setup key={String(route.online)} initialOnline={route.online} onStart={start} onBack={() => go('#/')} />;
       break;
     case 'game':
       screen = <Game key={route.id} id={route.id} onExit={() => go('#/')} onNewGame={() => go('#/nouvelle')} />;
@@ -78,6 +83,7 @@ export default function App() {
       screen = (
         <Home
           onNew={() => go('#/nouvelle')}
+          onNewOnline={() => go('#/nouveau-salon')}
           onOpen={(id) => go(`#/partie/${id}`)}
           onRoom={(code) => go(`#/salon/${code}`)}
           onIntro={() => setShowIntro(true)}
