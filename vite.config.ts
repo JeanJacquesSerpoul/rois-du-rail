@@ -30,6 +30,9 @@ export default defineConfig({
   base: process.env.BASE_PATH ?? '/',
   plugins: [react(), serviceWorker()],
   server: {
-    proxy: { '/api': 'http://localhost:3001' },
+    proxy: {
+      '/api': 'http://localhost:3001',
+      '/ws': { target: 'ws://localhost:3001', ws: true },
+    },
   },
 });

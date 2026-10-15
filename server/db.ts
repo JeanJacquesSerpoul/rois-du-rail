@@ -1,10 +1,13 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import type { RoomMeta } from '../shared/online';
+import type { FinishedGame } from '../shared/stats';
 import type { Action, GameState } from '../shared/types';
 
-const DB_PATH = resolve(process.env.DB_PATH ?? 'data/rois-du-rail.db');
-mkdirSync(dirname(DB_PATH), { recursive: true });
+// « :memory: » : base temporaire (tests)
+const DB_PATH = process.env.DB_PATH === ':memory:' ? ':memory:' : resolve(process.env.DB_PATH ?? 'data/rois-du-rail.db');
+if (DB_PATH !== ':memory:') mkdirSync(dirname(DB_PATH), { recursive: true });
 
 export const db = new DatabaseSync(DB_PATH);
 db.exec(`
@@ -38,6 +41,13 @@ db.exec(`
     seat        INTEGER NOT NULL,
     action_json TEXT NOT NULL,
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- parties en ligne : code du salon et places (jetons secrets des joueurs)
+  CREATE TABLE IF NOT EXISTS rooms (
+    code        TEXT PRIMARY KEY,
+    game_id     INTEGER NOT NULL UNIQUE REFERENCES games(id) ON DELETE CASCADE,
+    seats_json  TEXT NOT NULL
   );
 
   CREATE INDEX IF NOT EXISTS idx_moves_game ON moves(game_id);
@@ -91,7 +101,9 @@ export function saveMove(id: number, seat: number, action: Action, state: GameSt
 export function listGames() {
   const games = db
     .prepare(
-      "SELECT id, status, json_extract(state_json, '$.mapId') AS map_id, created_at, updated_at FROM games ORDER BY updated_at DESC LIMIT 30",
+      `SELECT g.id, g.status, json_extract(g.state_json, '$.mapId') AS map_id, r.code AS room, g.created_at, g.updated_at
+         FROM games g LEFT JOIN rooms r ON r.game_id = g.id
+        ORDER BY g.updated_at DESC LIMIT 30`,
     )
     .all() as Omit<GameRow, 'state_json'>[];
   const players = db.prepare('SELECT seat, name, is_bot, color, score, rank FROM game_players WHERE game_id = ? ORDER BY seat');
@@ -121,4 +133,56 @@ export function leaderboard() {
         LIMIT 50`,
     )
     .all();
+}
+
+export function insertRoom(gameId: number, meta: RoomMeta) {
+  db.prepare('INSERT INTO rooms (code, game_id, seats_json) VALUES (?, ?, ?)').run(meta.code, gameId, JSON.stringify(meta.seats));
+}
+
+export function getRoom(code: string): { gameId: number; meta: RoomMeta } | null {
+  const row = db.prepare('SELECT game_id, seats_json FROM rooms WHERE code = ?').get(code) as
+    | { game_id: number; seats_json: string }
+    | undefined;
+  return row ? { gameId: row.game_id, meta: { code, seats: JSON.parse(row.seats_json) } } : null;
+}
+
+export function roomOfGame(gameId: number): string | null {
+  const row = db.prepare('SELECT code FROM rooms WHERE game_id = ?').get(gameId) as { code: string } | undefined;
+  return row?.code ?? null;
+}
+
+/** Un invité a pris sa place : on garde son jeton et son nom. */
+export function saveSeats(gameId: number, meta: RoomMeta, state: GameState) {
+  db.exec('BEGIN');
+  try {
+    db.prepare('UPDATE rooms SET seats_json = ? WHERE game_id = ?').run(JSON.stringify(meta.seats), gameId);
+    db.prepare('UPDATE games SET state_json = ? WHERE id = ?').run(JSON.stringify(state), gameId);
+    const upd = db.prepare('UPDATE game_players SET name = ? WHERE game_id = ? AND seat = ?');
+    for (const [seat, p] of state.players.entries()) upd.run(p.name, gameId, seat);
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+}
+
+/** Parties terminées d'un joueur, avec leurs coups, pour sa fiche. */
+export function finishedGamesOf(name: string): FinishedGame[] {
+  const games = db
+    .prepare(
+      `SELECT g.id, g.state_json, g.updated_at FROM games g
+        WHERE g.status = 'finished' AND EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id = g.id AND gp.name = ?)
+        ORDER BY g.updated_at`,
+    )
+    .all(name) as { id: number; state_json: string; updated_at: string }[];
+  const moves = db.prepare('SELECT seat, action_json FROM moves WHERE game_id = ? ORDER BY id');
+  return games.map((g) => ({
+    id: g.id,
+    date: g.updated_at,
+    state: JSON.parse(g.state_json) as GameState,
+    moves: (moves.all(g.id) as { seat: number; action_json: string }[]).map((m) => ({
+      seat: m.seat,
+      action: JSON.parse(m.action_json) as Action,
+    })),
+  }));
 }

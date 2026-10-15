@@ -3,28 +3,33 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import type { MapId } from '../shared/maps';
 import type { PlayerConfig } from '../shared/types';
 import { Game } from './components/Game';
+import { RoomScreen } from './components/Room';
 import { Home, Setup } from './components/Screens';
 import { startTutorial } from './components/Tutorial';
 import { api } from './lib/api';
 import { currentT } from './lib/i18n';
 import { introSeen } from './lib/intro';
+import { createRoom } from './lib/online';
 
 // présentation chargée à la demande (première visite ou bouton de l'accueil)
 const IntroVideo = lazy(() => import('./components/IntroVideo').then((m) => ({ default: m.IntroVideo })));
 
-type Route = { name: 'home' } | { name: 'setup' } | { name: 'game'; id: number };
+type Route = { name: 'home' } | { name: 'setup' } | { name: 'game'; id: number } | { name: 'room'; code: string };
 
 function parseHash(): Route {
   const m = location.hash.match(/^#\/partie\/(\d+)/);
   if (m) return { name: 'game', id: Number(m[1]) };
+  const room = location.hash.match(/^#\/salon\/([A-Za-z0-9]{6})/);
+  if (room) return { name: 'room', code: room[1].toUpperCase() };
   if (location.hash === '#/nouvelle') return { name: 'setup' };
   return { name: 'home' };
 }
 
 export default function App() {
   const [route, setRoute] = useState<Route>(parseHash);
-  // présentation animée à la toute première ouverture, puis sur demande depuis l'accueil
-  const [showIntro, setShowIntro] = useState(() => !introSeen());
+  // présentation animée à la toute première ouverture (sauf arrivée par un lien d'invitation),
+  // puis sur demande depuis l'accueil
+  const [showIntro, setShowIntro] = useState(() => !introSeen() && parseHash().name !== 'room');
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash());
@@ -36,7 +41,8 @@ export default function App() {
     location.hash = hash;
   };
 
-  const start = async (players: PlayerConfig[], mapId: MapId) => {
+  const start = async (players: PlayerConfig[], mapId: MapId, online: boolean) => {
+    if (online) return go(`#/salon/${await createRoom(players, mapId)}`);
     const { id } = await api.createGame(players, mapId);
     go(`#/partie/${id}`);
   };
@@ -65,11 +71,15 @@ export default function App() {
     case 'game':
       screen = <Game key={route.id} id={route.id} onExit={() => go('#/')} onNewGame={() => go('#/nouvelle')} />;
       break;
+    case 'room':
+      screen = <RoomScreen key={route.code} code={route.code} onExit={() => go('#/')} onNewGame={() => go('#/nouvelle')} />;
+      break;
     default:
       screen = (
         <Home
           onNew={() => go('#/nouvelle')}
           onOpen={(id) => go(`#/partie/${id}`)}
+          onRoom={(code) => go(`#/salon/${code}`)}
           onIntro={() => setShowIntro(true)}
           onTutorial={tutorial}
         />

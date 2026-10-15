@@ -63,7 +63,11 @@ export type ErrorCode =
   | 'unknownAction'
   | 'colors'
   | 'botSeat'
-  | 'notFound';
+  | 'notFound'
+  | 'online'
+  | 'roomNotFound'
+  | 'seatTaken'
+  | 'badToken';
 
 export class GameError extends Error {
   constructor(

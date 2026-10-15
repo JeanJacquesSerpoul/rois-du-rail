@@ -1,5 +1,6 @@
 import { AnimatePresence } from 'motion/react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { music } from '../lib/music';
 import { setPref, usePref, type BotSpeed, type MapTheme } from '../lib/prefs';
 import { playSfx } from '../lib/sfx';
@@ -184,7 +185,11 @@ export function SettingsButton() {
       >
         <span aria-hidden>⚙️</span>
       </button>
-      <AnimatePresence>{open && <SettingsSheet key="settings" onClose={() => setOpen(false)} />}</AnimatePresence>
+      {/* hors de la barre du haut, pour passer au-dessus du panneau de jeu */}
+      {createPortal(
+        <AnimatePresence>{open && <SettingsSheet key="settings" onClose={() => setOpen(false)} />}</AnimatePresence>,
+        document.body,
+      )}
     </>
   );
 }

@@ -1,6 +1,8 @@
 import { BOT_LEVELS, botAction } from '../../shared/bot';
 import { GameError, applyAction, createGame } from '../../shared/engine';
 import { MAP_IDS, type MapId } from '../../shared/maps';
+import { type RoomMeta, newRoom } from '../../shared/online';
+import { playerProfile } from '../../shared/stats';
 import type { Action, GameState, PlayerConfig } from '../../shared/types';
 import type { GameSummary, LeaderRow } from './api';
 
@@ -15,6 +17,10 @@ interface StoredGame {
   state: GameState;
   created_at: string;
   updated_at: string;
+  /** Coups joués (fiche joueur : cartes et routes préférées). Absent dans les parties plus anciennes. */
+  moves?: { seat: number; action: Action }[];
+  /** Salon pair-à-pair dont ce navigateur est l'hôte. */
+  room?: RoomMeta;
 }
 
 interface Store {
@@ -51,9 +57,10 @@ function getStored(id: number): StoredGame {
   return g;
 }
 
-function update(id: number, state: GameState) {
+function update(id: number, state: GameState, move?: { seat: number; action: Action }) {
   const g = getStored(id);
   g.state = state;
+  if (move) g.moves = [...(g.moves ?? []), move];
   g.updated_at = now();
   save(store());
   return { id, state };
@@ -64,6 +71,7 @@ function summary(id: number, g: StoredGame): GameSummary {
     id,
     status: g.state.phase,
     map_id: g.state.mapId ?? 'france',
+    room: g.room?.code ?? null,
     created_at: g.created_at,
     updated_at: g.updated_at,
     players: g.state.players.map((p, seat) => {
@@ -71,6 +79,22 @@ function summary(id: number, g: StoredGame): GameSummary {
       return { seat, name: p.name, is_bot: p.isBot ? 1 : 0, color: p.color, score: r?.total ?? null, rank: r?.rank ?? null };
     }),
   };
+}
+
+function newGame(players: PlayerConfig[], mapId: MapId) {
+  const configs = players.map((p, i) => ({
+    ...p,
+    name: p.name.trim().slice(0, 20) || `Joueur ${i + 1}`,
+    level: p.level && BOT_LEVELS.includes(p.level) ? p.level : 'normal',
+  }));
+  if (new Set(configs.map((p) => p.color)).size !== configs.length)
+    throw new GameError('colors', 'Chaque joueur doit avoir sa couleur.');
+  const state = createGame(configs, Math.floor(Math.random() * 2 ** 31), MAP_IDS.includes(mapId) ? mapId : 'france');
+  const s = store();
+  const id = s.nextId++;
+  s.games[id] = { state, created_at: now(), updated_at: now(), moves: [] };
+  save(s);
+  return { id, state };
 }
 
 // Les appels restent asynchrones pour garder la même interface que l'API HTTP.
@@ -91,22 +115,33 @@ export const localApi = {
         .slice(0, 30),
     ),
 
-  createGame: (players: PlayerConfig[], mapId: MapId = 'france') =>
+  createGame: (players: PlayerConfig[], mapId: MapId = 'france') => wrap(() => newGame(players, mapId)),
+
+  /** Partie en ligne dont ce navigateur sera l'hôte (pair-à-pair). */
+  createRoom: (players: PlayerConfig[], mapId: MapId = 'france') =>
     wrap(() => {
-      const configs = players.map((p, i) => ({
-        ...p,
-        name: p.name.trim().slice(0, 20) || `Joueur ${i + 1}`,
-        level: p.level && BOT_LEVELS.includes(p.level) ? p.level : 'normal',
-      }));
-      if (new Set(configs.map((p) => p.color)).size !== configs.length)
-        throw new GameError('colors', 'Chaque joueur doit avoir sa couleur.');
-      const state = createGame(configs, Math.floor(Math.random() * 2 ** 31), MAP_IDS.includes(mapId) ? mapId : 'france');
-      const s = store();
-      const id = s.nextId++;
-      s.games[id] = { state, created_at: now(), updated_at: now() };
-      save(s);
-      return { id, state };
+      const { id, state } = newGame(players, mapId);
+      const { meta, hostToken } = newRoom(state.players);
+      getStored(id).room = meta;
+      save(store());
+      return { id, state, meta, hostToken };
     }),
+
+  room: (id: number) => {
+    const g = getStored(id);
+    if (!g.room) throw new GameError('roomNotFound', 'Salon introuvable.');
+    return { state: g.state, meta: g.room };
+  },
+
+  saveRoom: (id: number, meta: RoomMeta, state: GameState) => {
+    const g = getStored(id);
+    g.room = meta;
+    update(id, state);
+  },
+
+  /** Coup d'un joueur du salon (le jeton a déjà été vérifié par l'hôte). */
+  actRoom: (id: number, seat: number, action: Action) =>
+    update(id, applyAction(getStored(id).state, seat, action), { seat, action }),
 
   getGame: (id: number) => wrap(() => ({ id, state: getStored(id).state })),
 
@@ -120,14 +155,25 @@ export const localApi = {
     wrap(() => {
       const state = getStored(id).state;
       if (state.players[seat]?.isBot) throw new GameError('botSeat', 'Ce joueur est contrôlé par l’ordinateur.');
-      return update(id, applyAction(state, seat, action));
+      return update(id, applyAction(state, seat, action), { seat, action });
     }),
 
   bot: (id: number) =>
     wrap(() => {
       const state = getStored(id).state;
       if (state.phase === 'finished' || !state.players[state.current].isBot) return { id, state };
-      return update(id, applyAction(state, state.current, botAction(state)));
+      const action = botAction(state);
+      return update(id, applyAction(state, state.current, action), { seat: state.current, action });
+    }),
+
+  player: (name: string) =>
+    wrap(() => {
+      const games = Object.entries(store().games)
+        .filter(([, g]) => g.state.phase === 'finished')
+        .map(([id, g]) => ({ id: Number(id), date: g.updated_at, state: g.state, moves: g.moves ?? [] }));
+      const profile = playerProfile(name, games);
+      if (!profile) throw new GameError('notFound', 'Joueur introuvable.');
+      return profile;
     }),
 
   stats: () =>

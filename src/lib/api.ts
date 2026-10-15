@@ -1,4 +1,5 @@
 import type { MapId } from '../../shared/maps';
+import type { PlayerProfile } from '../../shared/stats';
 import type { Action, GameState, PlayerConfig } from '../../shared/types';
 import { localApi } from './localApi';
 
@@ -7,6 +8,8 @@ export interface GameSummary {
   status: GameState['phase'];
   /** Carte jouée (absente pour les parties antérieures : France). */
   map_id?: string | null;
+  /** Code du salon pour une partie en ligne. */
+  room?: string | null;
   created_at: string;
   updated_at: string;
   players: { seat: number; name: string; is_bot: number; color: string; score: number | null; rank: number | null }[];
@@ -51,9 +54,12 @@ const httpApi = {
     call<GameResponse>(`/api/games/${id}/actions`, { method: 'POST', body: JSON.stringify({ seat, action }) }),
   bot: (id: number) => call<GameResponse>(`/api/games/${id}/bot`, { method: 'POST' }),
   stats: () => call<LeaderRow[]>('/api/stats'),
+  player: (name: string) => call<PlayerProfile>(`/api/players/${encodeURIComponent(name)}`),
 };
 
 /** Build statique (GitHub Pages) : pas de serveur, tout tourne dans le navigateur. */
 export const OFFLINE = import.meta.env.VITE_OFFLINE === '1';
 
-export const api = OFFLINE ? localApi : httpApi;
+export const api: typeof httpApi = OFFLINE ? localApi : httpApi;
+
+export { call };

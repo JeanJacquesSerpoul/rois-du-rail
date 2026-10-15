@@ -4,11 +4,13 @@ import { BOT_LEVELS } from '../../shared/bot';
 import { LONGEST_BONUS, ROUTE_POINTS } from '../../shared/engine';
 import { MAP_IDS, MAPS, type MapId, getMap } from '../../shared/maps';
 import type { BotLevel, PlayerColor, PlayerConfig } from '../../shared/types';
+import { isRoomCode } from '../../shared/online';
 import { OFFLINE, api, type GameSummary, type LeaderRow } from '../lib/api';
 import { errorText, useT } from '../lib/i18n';
 import { setPref, usePref } from '../lib/prefs';
 import { PLAYER_FILL } from '../lib/theme';
 import { BrandTitle } from './Brand';
+import { PlayerSheet } from './Profile';
 import { ConfirmDialog } from './ConfirmDialog';
 import { SettingsButton } from './Settings';
 import { Sheet } from './Tickets';
@@ -70,11 +72,13 @@ function HeroTrain() {
 export function Home({
   onNew,
   onOpen,
+  onRoom,
   onIntro,
   onTutorial,
 }: {
   onNew: () => void;
   onOpen: (id: number) => void;
+  onRoom: (code: string) => void;
   onIntro: () => void;
   onTutorial: () => Promise<void>;
 }) {
@@ -85,6 +89,9 @@ export function Home({
   const [error, setError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<GameSummary | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [profile, setProfile] = useState<string | null>(null);
+  const open = (g: GameSummary) => (g.room ? onRoom(g.room) : onOpen(g.id));
 
   const refresh = () =>
     api
@@ -140,7 +147,7 @@ export function Home({
           <motion.button
             type="button"
             className="btn btn--primary btn--xl"
-            onClick={() => onOpen(ongoing[0].id)}
+            onClick={() => open(ongoing[0])}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
           >
@@ -183,6 +190,30 @@ export function Home({
           </button>
         </div>
 
+        <form
+          className="home__join"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const code = joinCode.trim().toUpperCase();
+            if (isRoomCode(code)) onRoom(code);
+          }}
+        >
+          <label htmlFor="join-code">{t('home.joinLabel')}</label>
+          <input
+            id="join-code"
+            value={joinCode}
+            maxLength={6}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="ABC234"
+            onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+          />
+          <button type="submit" className="btn" disabled={!isRoomCode(joinCode)}>
+            {t('home.join')}
+          </button>
+        </form>
+
         {error && <p className="home__error">{t('home.serverError', { error })}</p>}
         {OFFLINE && <p className="home__note">{t('home.offlineNote')}</p>}
 
@@ -191,7 +222,7 @@ export function Home({
             <h2>{t('home.ongoing')}</h2>
             <ul className="game-list">
               {ongoing.map((g) => (
-                <GameRow key={g.id} game={g} num={num(g)} onOpen={onOpen} onDelete={() => setToDelete(g)} />
+                <GameRow key={g.id} game={g} num={num(g)} onOpen={() => open(g)} onDelete={() => setToDelete(g)} />
               ))}
             </ul>
           </section>
@@ -201,7 +232,7 @@ export function Home({
             <h2>{t('home.finished')}</h2>
             <ul className="game-list">
               {finished.map((g) => (
-                <GameRow key={g.id} game={g} num={num(g)} onOpen={onOpen} onDelete={() => setToDelete(g)} />
+                <GameRow key={g.id} game={g} num={num(g)} onOpen={() => open(g)} onDelete={() => setToDelete(g)} />
               ))}
             </ul>
           </section>
@@ -210,7 +241,8 @@ export function Home({
 
       <AnimatePresence>
         {sheet === 'rules' && <Rules key="rules" onClose={() => setSheet(null)} />}
-        {sheet === 'stats' && <Stats key="stats" rows={leaders} onClose={() => setSheet(null)} />}
+        {sheet === 'stats' && !profile && <Stats key="stats" rows={leaders} onPick={setProfile} onClose={() => setSheet(null)} />}
+        {sheet === 'stats' && profile && <PlayerSheet key="profile" name={profile} onBack={() => setProfile(null)} />}
         {toDelete && (
           <ConfirmDialog
             key="confirm-delete"
@@ -247,7 +279,7 @@ function GameRow({
   game: GameSummary;
   /** Numéro affiché (rang parmi les parties enregistrées). */
   num: number;
-  onOpen: (id: number) => void;
+  onOpen: () => void;
   onDelete: () => void;
 }) {
   const { t, lang } = useT();
@@ -256,7 +288,7 @@ function GameRow({
   const map = getMap(game.map_id);
   return (
     <li className="game-row">
-      <button type="button" className="game-row__main" onClick={() => onOpen(game.id)}>
+      <button type="button" className="game-row__main" onClick={onOpen}>
         <span className="game-row__players">
           {game.players.map((p) => (
             <span
@@ -272,6 +304,12 @@ function GameRow({
         <span className="game-row__text">
           <b>
             {t('home.game', { id: num })} · {map.name[lang]}
+            {game.room && (
+              <span className="game-row__online" title={t('home.onlineGame', { code: game.room })}>
+                {' '}
+                🌐 {game.room}
+              </span>
+            )}
           </b>
           <small>
             {game.status === 'finished' && winner ? `${t('home.winner', { name: winner.name, pts: winner.score ?? 0 })} · ` : ''}
@@ -437,7 +475,7 @@ export function Setup({
   onStart,
   onBack,
 }: {
-  onStart: (players: PlayerConfig[], mapId: MapId) => Promise<void>;
+  onStart: (players: PlayerConfig[], mapId: MapId, online: boolean) => Promise<void>;
   onBack: () => void;
 }) {
   const { t } = useT();
@@ -457,6 +495,8 @@ export function Setup({
   ]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // en ligne : le premier joueur est l'hôte (cet appareil), les autres humains rejoignent par un lien
+  const [online, setOnline] = useState(false);
 
   const setCount = (n: number) => {
     setPlayers((ps) => {
@@ -486,6 +526,7 @@ export function Setup({
   };
 
   const start = async () => {
+    if (online && !players.slice(1).some((p) => !p.isBot)) return setError(t('setup.onlineNeedsGuest'));
     setBusy(true);
     setError(null);
     try {
@@ -498,7 +539,7 @@ export function Setup({
       } catch {
         /* stockage indisponible */
       }
-      await onStart(players, mapId);
+      await onStart(online ? players.map((p, i) => (i === 0 ? { ...p, isBot: false } : p)) : players, mapId, online);
     } catch (e) {
       setError(errorText(e, t));
       setBusy(false);
@@ -515,6 +556,28 @@ export function Setup({
       </header>
       <div className="setup__body">
         <MapPicker value={mapId} onChange={setMapId} />
+        <fieldset className="setup__mode" aria-label={t('setup.mode')}>
+          {([false, true] as const).map((on) => (
+            <button
+              key={String(on)}
+              type="button"
+              aria-pressed={online === on}
+              className={`mode-card ${online === on ? 'is-on' : ''}`}
+              onClick={() => {
+                setOnline(on);
+                // en ligne, une place est proposée d'office à un ami
+                if (on && !players.slice(1).some((p) => !p.isBot))
+                  update(1, { isBot: false, name: t('setup.guestName', { n: 2 }) });
+              }}
+            >
+              <span className="mode-card__icon" aria-hidden>
+                {on ? '🌐' : '📱'}
+              </span>
+              <b>{on ? t('setup.modeOnline') : t('setup.modeLocal')}</b>
+              <small>{on ? t('setup.modeOnlineHint') : t('setup.modeLocalHint')}</small>
+            </button>
+          ))}
+        </fieldset>
         <div className="setup__count">
           <span>{t('setup.players')}</span>
           <div className="segmented">
@@ -551,14 +614,27 @@ export function Setup({
                   onChange={(e) => update(i, { name: e.target.value })}
                   aria-label={t('setup.nameLabel', { n: i + 1 })}
                 />
-                <div className="segmented segmented--sm">
-                  <button type="button" className={!p.isBot ? 'is-on' : ''} onClick={() => update(i, { isBot: false })}>
-                    {t('setup.human')}
-                  </button>
-                  <button type="button" className={p.isBot ? 'is-on' : ''} onClick={() => update(i, { isBot: true })}>
-                    {t('setup.bot')}
-                  </button>
-                </div>
+                {online && i === 0 ? (
+                  <span className="setup-player__badge">{t('setup.hostBadge')}</span>
+                ) : (
+                  <div className="segmented segmented--sm">
+                    <button
+                      type="button"
+                      className={!p.isBot ? 'is-on' : ''}
+                      onClick={() =>
+                        update(
+                          i,
+                          online && p.isBot ? { isBot: false, name: t('setup.guestName', { n: i + 1 }) } : { isBot: false },
+                        )
+                      }
+                    >
+                      {online ? t('setup.guest') : t('setup.human')}
+                    </button>
+                    <button type="button" className={p.isBot ? 'is-on' : ''} onClick={() => update(i, { isBot: true })}>
+                      {t('setup.bot')}
+                    </button>
+                  </div>
+                )}
                 {p.isBot && (
                   <fieldset className="setup-player__level" aria-label={t('setup.levelOf', { name: p.name })}>
                     <span>{t('setup.level')}</span>
@@ -581,12 +657,12 @@ export function Setup({
           </AnimatePresence>
         </ul>
         <p className="setup__note">
-          {t('setup.hotseat')}
+          {online ? (OFFLINE ? t('setup.onlineNotePeer') : t('setup.onlineNote')) : t('setup.hotseat')}
           {players.length < 4 && ` ${t('setup.doubles')}`}
         </p>
         {error && <p className="home__error">{error}</p>}
         <button type="button" className="btn btn--primary btn--xl" disabled={busy} onClick={start}>
-          {busy ? t('setup.starting') : t('setup.start')}
+          {busy ? t('setup.starting') : online ? t('setup.startOnline') : t('setup.start')}
         </button>
       </div>
     </div>
@@ -633,7 +709,7 @@ function Rules({ onClose }: { onClose: () => void }) {
   );
 }
 
-function Stats({ rows, onClose }: { rows: LeaderRow[] | null; onClose: () => void }) {
+function Stats({ rows, onPick, onClose }: { rows: LeaderRow[] | null; onPick: (name: string) => void; onClose: () => void }) {
   const { t } = useT();
   return (
     <Sheet title={t('stats.title')} subtitle={t('stats.subtitle')} onClose={onClose}>
@@ -657,7 +733,9 @@ function Stats({ rows, onClose }: { rows: LeaderRow[] | null; onClose: () => voi
             {rows.map((r, i) => (
               <tr key={r.name}>
                 <td>
-                  {i < 3 ? ['🥇', '🥈', '🥉'][i] : ''} {r.name} {r.is_bot ? '🤖' : ''}
+                  <button type="button" className="stats__name" onClick={() => onPick(r.name)} title={t('profile.open')}>
+                    {i < 3 ? ['🥇', '🥈', '🥉'][i] : ''} {r.name} {r.is_bot ? '🤖' : ''}
+                  </button>
                 </td>
                 <td>{r.games}</td>
                 <td>{r.wins}</td>

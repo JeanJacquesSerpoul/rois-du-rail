@@ -5,6 +5,7 @@ import { planPath } from '../../shared/bot';
 import { claimStatus, computePayment, mapOf, paymentOptions, routeBlockedByPair, ticketDone } from '../../shared/engine';
 import type { Action, CardColor, GameEvent, GameState } from '../../shared/types';
 import { api } from '../lib/api';
+import type { RoomClient } from '../lib/online';
 import { errorText, useT } from '../lib/i18n';
 import { BOT_DELAYS, getPref, usePref } from '../lib/prefs';
 import { playSfx } from '../lib/sfx';
@@ -12,6 +13,7 @@ import { PLAYER_FILL } from '../lib/theme';
 import { AdvisorSheet } from './Advisor';
 import { Board, travelTime, type PlanOverlay } from './Board';
 import { EndScreen } from './EndScreen';
+import { RoomButton } from './Room';
 import { SettingsButton } from './Settings';
 import { TicketCelebration } from './TicketCelebration';
 import { Coach } from './Tutorial';
@@ -21,8 +23,20 @@ import { Sheet, TicketPicker } from './Tickets';
 // séquence de fin chargée à la demande : elle ne sert qu'une fois par partie
 const EndCinematic = lazy(() => import('./EndCinematic').then((m) => ({ default: m.EndCinematic })));
 
-export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void; onNewGame: () => void }) {
+export function Game({
+  id,
+  room,
+  onExit,
+  onNewGame,
+}: {
+  id: number;
+  /** Partie en ligne : coups envoyés au salon, une seule place jouée sur cet appareil. */
+  room?: RoomClient;
+  onExit: () => void;
+  onNewGame: () => void;
+}) {
   const { t, lang } = useT();
+  const mySeat = room?.me?.seat ?? null;
   // traducteur courant pour les rappels asynchrones (sans relancer les effets)
   const tRef = useRef(t);
   tRef.current = t;
@@ -60,100 +74,124 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   const [hint, setHint] = useState<Advice | null>(null);
   const lastSeq = useRef(0);
 
-  const receive = useCallback((next: GameState, initial = false) => {
-    const fresh = initial ? [] : next.events.filter((e) => e.seq > lastSeq.current);
-    lastSeq.current = next.eventSeq;
-    if (!initial && prevPhase.current !== 'finished' && next.phase === 'finished') setCinematic(true);
-    prevPhase.current = next.phase;
-    const before = prevState.current;
-    prevState.current = next;
+  const receive = useCallback(
+    (next: GameState, initial = false) => {
+      const fresh = initial ? [] : next.events.filter((e) => e.seq > lastSeq.current);
+      lastSeq.current = next.eventSeq;
+      if (!initial && prevPhase.current !== 'finished' && next.phase === 'finished') setCinematic(true);
+      prevPhase.current = next.phase;
+      const before = prevState.current;
+      prevState.current = next;
 
-    // billets humains qui viennent d'être reliés
-    const completed =
-      initial || !before
-        ? []
-        : next.players.flatMap((p, seat) =>
-            p.isBot
-              ? []
-              : p.tickets
-                  .filter(
-                    (tid) =>
-                      ticketDone(next, seat, tid) && before.players[seat].tickets.includes(tid) && !ticketDone(before, seat, tid),
-                  )
-                  .map((ticketId) => ({ seat, ticketId })),
-          );
-    if (completed.length) setCelebrations((c) => [...c, ...completed]);
+      // billets humains qui viennent d'être reliés
+      const completed =
+        initial || !before
+          ? []
+          : next.players.flatMap((p, seat) =>
+              p.isBot || (mySeat !== null && seat !== mySeat)
+                ? []
+                : p.tickets
+                    .filter(
+                      (tid) =>
+                        ticketDone(next, seat, tid) &&
+                        before.players[seat].tickets.includes(tid) &&
+                        !ticketDone(before, seat, tid),
+                    )
+                    .map((ticketId) => ({ seat, ticketId })),
+            );
+      if (completed.length) setCelebrations((c) => [...c, ...completed]);
 
-    // un seul effet sonore par mise à jour, le plus important
-    if (getPref('sfx') && fresh.length && next.phase !== 'finished') {
-      const kinds = new Set(fresh.map((e) => e.kind));
-      if (kinds.has('lastRound')) playSfx('bell');
-      else if (kinds.has('claimRoute')) playSfx('whistle');
-      else if (kinds.has('drawTickets') || kinds.has('keepTickets')) playSfx('tickets');
-      else if (kinds.has('drawFaceUp') || kinds.has('drawDeck')) playSfx('card');
-      if (completed.length) setTimeout(() => playSfx('chime'), 650);
-    }
-    setState(next);
-    setHint(null);
-    setAdvice(null);
-    const claimed = fresh.filter((e) => e.kind === 'claimRoute').pop();
-    if (claimed?.routeId !== undefined) {
-      setFlashRoute(claimed.routeId);
-      const duration = Math.max(1800, (travelTime(mapOf(next).routeById[claimed.routeId].length) + 1.8) * 1000);
-      setTimeout(() => setFlashRoute((r) => (r === claimed.routeId ? null : r)), duration);
-    }
-    const shown = fresh.filter(
-      (e) => next.players[e.seat].isBot || e.kind === 'lastRound' || e.kind === 'end' || e.kind === 'claimRoute',
-    );
-    if (shown.length) {
-      setToasts((t) => [...t, ...shown].slice(-3));
-      for (const e of shown) setTimeout(() => setToasts((t) => t.filter((x) => x.seq !== e.seq)), 3200);
-    }
-  }, []);
+      // un seul effet sonore par mise à jour, le plus important
+      if (getPref('sfx') && fresh.length && next.phase !== 'finished') {
+        const kinds = new Set(fresh.map((e) => e.kind));
+        if (kinds.has('lastRound')) playSfx('bell');
+        else if (kinds.has('claimRoute')) playSfx('whistle');
+        else if (kinds.has('drawTickets') || kinds.has('keepTickets')) playSfx('tickets');
+        else if (kinds.has('drawFaceUp') || kinds.has('drawDeck')) playSfx('card');
+        if (completed.length) setTimeout(() => playSfx('chime'), 650);
+      }
+      setState(next);
+      setHint(null);
+      setAdvice(null);
+      const claimed = fresh.filter((e) => e.kind === 'claimRoute').pop();
+      if (claimed?.routeId !== undefined) {
+        setFlashRoute(claimed.routeId);
+        const duration = Math.max(1800, (travelTime(mapOf(next).routeById[claimed.routeId].length) + 1.8) * 1000);
+        setTimeout(() => setFlashRoute((r) => (r === claimed.routeId ? null : r)), duration);
+      }
+      // en ligne, les coups des autres joueurs humains sont annoncés comme ceux des ordinateurs
+      const shown = fresh.filter(
+        (e) =>
+          next.players[e.seat].isBot ||
+          (mySeat !== null && e.seat !== mySeat) ||
+          e.kind === 'lastRound' ||
+          e.kind === 'end' ||
+          e.kind === 'claimRoute',
+      );
+      if (shown.length) {
+        setToasts((t) => [...t, ...shown].slice(-3));
+        for (const e of shown) setTimeout(() => setToasts((t) => t.filter((x) => x.seq !== e.seq)), 3200);
+      }
+    },
+    [mySeat],
+  );
 
   useEffect(() => {
+    if (room) {
+      // salon : état initial, puis chaque mise à jour reçue en direct
+      receive(room.state, true);
+      return room.subscribe(() => {
+        if (room.state !== prevState.current) receive(room.state);
+      });
+    }
     api
       .getGame(id)
       .then((r) => receive(r.state, true))
       .catch((e) => setError(errorText(e, tRef.current)));
-  }, [id, receive]);
+  }, [id, room, receive]);
 
-  // L'ordinateur joue tout seul, une action à la fois pour qu'on puisse suivre.
+  // L'ordinateur joue tout seul, une action à la fois pour qu'on puisse suivre
+  // (dans un salon avec serveur, c'est le serveur qui le fait jouer).
+  const drivesBots = !room || room.drivesBots;
   useEffect(() => {
-    if (!state || state.phase === 'finished' || !state.players[state.current].isBot) return;
+    if (!drivesBots || !state || state.phase === 'finished' || !state.players[state.current].isBot) return;
     const base = rush ? 0 : BOT_DELAYS[botSpeed];
     const delay = state.turn?.kind === 'draw' ? base * 0.6 : base;
     const timer = setTimeout(() => {
-      api
-        .bot(id)
-        .then((r) => receive(r.state))
-        .catch((e) => setError(errorText(e, tRef.current)));
+      (room ? room.bot() : api.bot(id).then((r) => receive(r.state))).catch((e) => setError(errorText(e, tRef.current)));
     }, delay);
     return () => clearTimeout(timer);
-  }, [state, id, receive, rush, botSpeed]);
+  }, [state, id, room, drivesBots, receive, rush, botSpeed]);
 
-  const humans = useMemo(() => (state ? state.players.flatMap((p, i) => (p.isBot ? [] : [i])) : []), [state]);
+  // joueurs qui partagent cet appareil (en ligne : soi seulement)
+  const humans = useMemo(
+    () => (mySeat !== null ? [mySeat] : state ? state.players.flatMap((p, i) => (p.isBot ? [] : [i])) : []),
+    [state, mySeat],
+  );
   const currentIsHuman = state ? !state.players[state.current].isBot : false;
+  const currentIsLocal = state ? humans.includes(state.current) : false;
 
   useEffect(() => {
-    if (state && currentIsHuman) {
+    if (state && currentIsLocal) {
       setLastHuman(state.current);
       setRush(false);
     }
-  }, [state, currentIsHuman]);
+  }, [state, currentIsLocal]);
 
   // Joueur dont on montre la main (jeu en local : celui qui a l'appareil)
-  const viewer: number | null = !state ? null : currentIsHuman ? state.current : (lastHuman ?? humans[0] ?? state.current);
+  const viewer: number | null = !state
+    ? null
+    : (mySeat ?? (currentIsHuman ? state.current : (lastHuman ?? humans[0] ?? state.current)));
   const mustPassDevice =
-    !!state && state.phase !== 'finished' && humans.length > 1 && currentIsHuman && revealed !== state.current;
-  const myTurn = !!state && currentIsHuman && viewer === state.current && !mustPassDevice && state.phase !== 'finished';
+    !!state && state.phase !== 'finished' && humans.length > 1 && currentIsLocal && revealed !== state.current;
+  const myTurn = !!state && currentIsLocal && viewer === state.current && !mustPassDevice && state.phase !== 'finished';
 
   const act = async (action: Action) => {
     if (!state || viewer === null) return;
     setBusy(true);
     try {
-      const r = await api.act(id, viewer, action);
-      receive(r.state);
+      if (room) await room.act(action);
+      else receive((await api.act(id, viewer, action)).state);
       navigator.vibrate?.(12);
       if (action.type === 'claimRoute') setSelectedRoute(null);
       if (action.type === 'keepTickets') setPreview([]);
@@ -243,6 +281,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
   let status: string;
   if (state.phase === 'finished') status = t('status.finished');
   else if (!currentIsHuman) status = t('status.botThinking', { name: current.name });
+  else if (!currentIsLocal) status = t('status.waiting', { name: current.name });
   else if (state.phase === 'setup') status = t('status.setup', { name: current.name });
   else if (state.turn?.kind === 'draw') status = t('status.secondCard');
   else if (state.turn?.kind === 'tickets') status = t('status.chooseTickets');
@@ -255,6 +294,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
           ←
         </button>
         <PlayersBar state={state} viewer={viewer} />
+        {room && <RoomButton room={room} />}
         <SettingsButton />
       </header>
 
@@ -291,7 +331,7 @@ export function Game({ id, onExit, onNewGame }: { id: number; onExit: () => void
               {t('game.results')}
             </button>
           )}
-          {!currentIsHuman && state.phase !== 'finished' && !rush && (
+          {!currentIsHuman && drivesBots && state.phase !== 'finished' && !rush && (
             <button type="button" className="chip-btn" onClick={() => setRush(true)} title={t('game.rushTitle')}>
               {t('game.rush')}
             </button>
