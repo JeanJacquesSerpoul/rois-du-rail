@@ -2,6 +2,12 @@ import type { MessageKey } from './fr';
 
 /** English texts. Every French key must exist here (checked by TypeScript). */
 export const en: Record<MessageKey, string> = {
+  // game title
+  'brand.start': 'Kings',
+  'brand.middle': 'of the',
+  'brand.end': 'Rail',
+  'brand.full': 'Kings of the Rail',
+
   // common
   'common.and': ' and ',
   'common.back': 'Back',
@@ -337,7 +343,7 @@ export const en: Record<MessageKey, string> = {
   'intro.t5': 'Destinations',
   'intro.t6': 'The end',
   'intro.t7': 'Your turn',
-  'intro.c0': 'Welcome aboard! In Rois du Rail, you build your own railway network.',
+  'intro.c0': 'Welcome aboard! In Kings of the Rail, you build your own railway network.',
   'intro.c1': 'Your goal: link the cities with your trains to score as many points as possible.',
   'intro.c2':
     'On your turn, you take a single action. For example, draw two train cards. The rainbow locomotive replaces any colour.',

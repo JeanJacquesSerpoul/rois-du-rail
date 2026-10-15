@@ -8,10 +8,12 @@ import { getPref, usePref } from './prefs';
 /** Traducteur de l'interface, dans la langue choisie (réglages) ou celle du navigateur. */
 export function useT(): { t: T; lang: Lang } {
   const lang = usePref('lang');
+  const value = useMemo(() => ({ t: makeT(lang), lang }), [lang]);
   useEffect(() => {
     document.documentElement.lang = lang;
-  }, [lang]);
-  return useMemo(() => ({ t: makeT(lang), lang }), [lang]);
+    document.title = value.t('brand.full');
+  }, [lang, value]);
+  return value;
 }
 
 /** Traducteur hors composant (messages ponctuels). */

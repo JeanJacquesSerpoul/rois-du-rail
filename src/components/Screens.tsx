@@ -8,6 +8,7 @@ import { OFFLINE, api, type GameSummary, type LeaderRow } from '../lib/api';
 import { errorText, useT } from '../lib/i18n';
 import { setPref, usePref } from '../lib/prefs';
 import { PLAYER_FILL } from '../lib/theme';
+import { BrandTitle } from './Brand';
 import { ConfirmDialog } from './ConfirmDialog';
 import { SettingsButton } from './Settings';
 import { Sheet } from './Tickets';
@@ -115,7 +116,7 @@ export function Home({
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
         >
-          Rois <span>du</span> Rail
+          <BrandTitle />
         </motion.h1>
         <motion.p className="home__tagline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           {t('home.tagline')}

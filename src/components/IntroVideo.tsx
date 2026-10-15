@@ -9,6 +9,7 @@ import { useFocusTrap } from '../lib/useFocusTrap';
 import type { Lang } from '../../shared/i18n';
 import type { MessageKey } from '../../shared/i18n/fr';
 import { CARD_FILL, PLAYER_FILL, ROUTE_FILL } from '../lib/theme';
+import { BrandTitle } from './Brand';
 import { TicketCard } from './Tickets';
 import { TrainCard, WagonIcon } from './TrainCard';
 
@@ -32,7 +33,7 @@ function SceneTitle() {
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
         transition={{ type: 'spring', stiffness: 160, damping: 14, delay: 0.4 }}
       >
-        Rois <span>du</span> Rail
+        <BrandTitle />
       </motion.h2>
       <div className="iv-rail" />
       <motion.div
@@ -553,7 +554,7 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
           ) : (
             <button type="button" className="intro__poster" onClick={start}>
               <span className="iv-logo">
-                Rois <span>du</span> Rail
+                <BrandTitle />
               </span>
               <span className="intro__play" aria-hidden>
                 ▶

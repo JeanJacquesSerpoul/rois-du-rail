@@ -3,6 +3,12 @@
  * « singulier|pluriel » est choisie selon `n`.
  */
 export const fr = {
+  // titre du jeu
+  'brand.start': 'Rois',
+  'brand.middle': 'du',
+  'brand.end': 'Rail',
+  'brand.full': 'Rois du Rail',
+
   // commun
   'common.and': ' et ',
   'common.back': 'Retour',
