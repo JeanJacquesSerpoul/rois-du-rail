@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BOT_LEVELS } from '../../shared/bot';
 import { LONGEST_BONUS, ROUTE_POINTS } from '../../shared/engine';
 import { MAP_IDS, MAPS, type MapId, getMap } from '../../shared/maps';
@@ -96,6 +96,17 @@ export function Home({
     refresh();
   }, []);
 
+  // numéro affiché : rang de création parmi les parties enregistrées (1 = la plus ancienne),
+  // plutôt que l'identifiant interne qui ne fait que croître
+  const numbers = useMemo(
+    () =>
+      new Map(
+        [...(games ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id).map((g, i) => [g.id, i + 1]),
+      ),
+    [games],
+  );
+  const num = (g: GameSummary) => numbers.get(g.id) ?? g.id;
+
   const ongoing = games?.filter((g) => g.status !== 'finished') ?? [];
   const finished = games?.filter((g) => g.status === 'finished').slice(0, 5) ?? [];
 
@@ -133,7 +144,7 @@ export function Home({
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
           >
-            {t('home.resume', { id: ongoing[0].id })}
+            {t('home.resume', { id: num(ongoing[0]) })}
           </motion.button>
         )}
         <motion.button
@@ -180,7 +191,7 @@ export function Home({
             <h2>{t('home.ongoing')}</h2>
             <ul className="game-list">
               {ongoing.map((g) => (
-                <GameRow key={g.id} game={g} onOpen={onOpen} onDelete={() => setToDelete(g)} />
+                <GameRow key={g.id} game={g} num={num(g)} onOpen={onOpen} onDelete={() => setToDelete(g)} />
               ))}
             </ul>
           </section>
@@ -190,7 +201,7 @@ export function Home({
             <h2>{t('home.finished')}</h2>
             <ul className="game-list">
               {finished.map((g) => (
-                <GameRow key={g.id} game={g} onOpen={onOpen} onDelete={() => setToDelete(g)} />
+                <GameRow key={g.id} game={g} num={num(g)} onOpen={onOpen} onDelete={() => setToDelete(g)} />
               ))}
             </ul>
           </section>
@@ -204,7 +215,7 @@ export function Home({
           <ConfirmDialog
             key="confirm-delete"
             icon="🗑"
-            title={t('home.deleteTitle', { id: toDelete.id })}
+            title={t('home.deleteTitle', { id: num(toDelete) })}
             message={toDelete.status === 'finished' ? t('home.deleteFinished') : t('home.deleteOngoing')}
             confirmLabel={t('common.delete')}
             busy={deleting}
@@ -227,7 +238,18 @@ export function Home({
   );
 }
 
-function GameRow({ game, onOpen, onDelete }: { game: GameSummary; onOpen: (id: number) => void; onDelete: () => void }) {
+function GameRow({
+  game,
+  num,
+  onOpen,
+  onDelete,
+}: {
+  game: GameSummary;
+  /** Numéro affiché (rang parmi les parties enregistrées). */
+  num: number;
+  onOpen: (id: number) => void;
+  onDelete: () => void;
+}) {
   const { t, lang } = useT();
   const date = new Date(`${game.updated_at.replace(' ', 'T')}Z`);
   const winner = game.players.find((p) => p.rank === 1);
@@ -249,7 +271,7 @@ function GameRow({ game, onOpen, onDelete }: { game: GameSummary; onOpen: (id: n
         </span>
         <span className="game-row__text">
           <b>
-            {t('home.game', { id: game.id })} · {map.name[lang]}
+            {t('home.game', { id: num })} · {map.name[lang]}
           </b>
           <small>
             {game.status === 'finished' && winner ? `${t('home.winner', { name: winner.name, pts: winner.score ?? 0 })} · ` : ''}
