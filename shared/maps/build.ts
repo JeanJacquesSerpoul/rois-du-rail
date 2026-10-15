@@ -6,7 +6,7 @@ import type { City, Route, RouteColor, Ticket } from '../types';
  * de la distance), billets (les points se déduisent du plus court chemin).
  */
 
-export type MapId = 'france' | 'bretagne' | 'europe';
+export type MapId = 'france' | 'bretagne' | 'europe' | 'usa';
 export type Localized = { fr: string; en: string };
 type LonLat = [lon: number, lat: number];
 

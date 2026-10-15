@@ -111,7 +111,7 @@ describe('chef de gare', () => {
 });
 
 describe('cartes', () => {
-  for (const id of ['bretagne', 'europe'] as const) {
+  for (const id of ['bretagne', 'europe', 'usa'] as const) {
     it(`simule des parties complètes sur la carte ${id}`, () => {
       for (let seed = 1; seed <= 8; seed++) {
         let s = createGame(

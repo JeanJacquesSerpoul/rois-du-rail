@@ -91,7 +91,7 @@ export interface PlayerResult {
 export interface GameState {
   version: 1;
   /** Carte jouée (absente dans les parties antérieures aux cartes multiples : France). */
-  mapId?: 'france' | 'bretagne' | 'europe';
+  mapId?: 'france' | 'bretagne' | 'europe' | 'usa';
   rng: number;
   phase: 'setup' | 'playing' | 'finished';
   players: Player[];

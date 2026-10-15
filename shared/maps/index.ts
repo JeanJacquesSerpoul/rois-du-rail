@@ -2,6 +2,7 @@ import { bretagneMap } from './bretagne';
 import type { GameMap, MapId } from './build';
 import { europeMap } from './europe';
 import { franceMap } from './france';
+import { usaMap } from './usa';
 
 export type { GameMap, MapId } from './build';
 
@@ -9,6 +10,7 @@ export const MAPS: Record<MapId, GameMap> = {
   france: franceMap,
   bretagne: bretagneMap,
   europe: europeMap,
+  usa: usaMap,
 };
 
 export const MAP_IDS = Object.keys(MAPS) as MapId[];

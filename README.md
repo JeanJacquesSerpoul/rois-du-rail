@@ -5,13 +5,14 @@
 
 **▶ Jouer en ligne : https://jeanjacquesserpoul.github.io/rois-du-rail/**
 
-Jeu de conquête ferroviaire inspiré des *Aventuriers du Rail*, avec trois cartes originales :
+Jeu de conquête ferroviaire inspiré des *Aventuriers du Rail*, avec quatre cartes originales :
 
 | Carte | Villes | Routes | Wagons par joueur |
 | --- | --- | --- | --- |
 | France | 44 | 99 | 45 |
 | Bretagne (les 5 départements, Loire-Atlantique comprise) | 41 | 69 | 30 |
 | Europe (de Lisbonne à Moscou) | 50 | 94 | 45 |
+| États-Unis (de Seattle à Miami) | 45 | 91 | 45 |
 
 L'interface existe en **français et en anglais** (langue du navigateur par défaut, modifiable dans les réglages).
 
