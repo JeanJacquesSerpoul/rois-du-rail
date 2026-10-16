@@ -1,10 +1,8 @@
 name: GitHub Pages
 
-# TEMPORAIRE : la page de démonstration est publiée depuis la branche expérimentale.
-# Remettre « main » avant de fusionner cette branche.
 on:
   push:
-    branches: [experimental]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
